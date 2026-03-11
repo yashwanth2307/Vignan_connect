@@ -1,0 +1,1007 @@
+// ============================================
+// V-CONNECT 2.0 — Complete Database Schema
+// Vignan Institute of Technology and Science
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  HOD
+  FACULTY
+  STUDENT
+  EXAM_CELL
+  TPO
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum AttendanceMethod {
+  MANUAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SessionStatus {
+  ACTIVE
+  CLOSED
+  EXPIRED
+}
+
+enum EvalTaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  VERIFIED
+  LOCKED
+}
+
+enum MarksStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  LOCKED
+  RELEASED
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  EXPIRED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum ProblemDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ContestStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+}
+
+// ──────────────────────────────────────────
+// CORE AUTH
+// ──────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         UserRole @default(STUDENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  student             Student?
+  faculty             Faculty?
+  auditLogs           AuditLog[]
+  createdMaterials    Material[]
+  createdAssignments  Assignment[]
+  createdEvents       Event[]            @relation("EventCreator")
+  announcements       Announcement[]
+  placementDrives     PlacementDrive[]
+  onlineClasses       OnlineClass[]      @relation("OnlineClassCreator")
+  createdSkillCourses SkillCourse[]
+  groupMessages       GroupMessage[]
+  clubsCoordinated    Club[]             @relation("ClubCoordinator")
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────
+// ACADEMIC STRUCTURE
+// ──────────────────────────────────────────
+
+model Department {
+  id   String @id @default(uuid())
+  name String @unique
+  code String @unique
+
+  sections  Section[]
+  students  Student[]
+  faculty   Faculty[]
+  subjects  Subject[]
+  semesters Semester[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("departments")
+}
+
+model Section {
+  id           String     @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  students        Student[]
+  courseOfferings CourseOffering[]
+  timetableSlots  TimetableSlot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, departmentId])
+  @@map("sections")
+}
+
+model Regulation {
+  id         String   @id @default(uuid())
+  code       String   @unique // e.g., R20, R22
+  rulesJson  String   @default("{}")
+  pdfUrl     String?
+  version    Int      @default(1)
+  activeFrom DateTime
+
+  semesters Semester[]
+  students  Student[]
+  subjects  Subject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("regulations")
+}
+
+model Semester {
+  id           String     @id @default(uuid())
+  number       Int
+  regulationId String
+  regulation   Regulation @relation(fields: [regulationId], references: [id])
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  courseOfferings CourseOffering[]
+  examSessions    ExamSession[]
+  hallTickets     HallTicket[]
+  marks           Marks[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([number, regulationId, departmentId])
+  @@map("semesters")
+}
+
+// ──────────────────────────────────────────
+// USERS: STUDENT & FACULTY
+// ──────────────────────────────────────────
+
+model Student {
+  id             String     @id @default(uuid())
+  userId         String     @unique
+  user           User       @relation(fields: [userId], references: [id])
+  rollNo         String     @unique
+  sectionId      String
+  section        Section    @relation(fields: [sectionId], references: [id])
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id])
+  regulationId   String
+  regulation     Regulation @relation(fields: [regulationId], references: [id])
+  batchStartYear Int
+  batchEndYear   Int
+  photoUrl       String?
+
+  attendanceRecords     AttendanceRecord[]
+  submissions           Submission[]
+  quizAttempts          QuizAttempt[]
+  pointsLedger          PointsLedger[]
+  hallTickets           HallTicket[]
+  answerScripts         AnswerScript[]
+  marks                 Marks[]
+  placementApplications PlacementApplication[]
+  contestParticipations ContestParticipation[]
+  codeStreaks           CodeStreak?
+  codeNotes             CodeNote[]
+  codeSubmissions       CodeSubmission[]
+  skillEnrollments      SkillEnrollment[]
+  groupMemberships      GroupMember[]
+  groupSubmissions      GroupSubmission[]
+  clubMemberships       ClubMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("students")
+}
+
+model Faculty {
+  id           String     @id @default(uuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id])
+  empId        String     @unique
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  dateOfJoin   DateTime
+
+  courseOfferings CourseOffering[]
+  topicsTaught    TopicsTaught[]
+  evaluationTasks EvaluationTask[]
+  createdProblems CodeProblem[]
+  createdContests CodeContest[]
+  groups          Group[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("faculty")
+}
+
+// ──────────────────────────────────────────
+// ACADEMIC: SUBJECTS, COURSES, TIMETABLE
+// ──────────────────────────────────────────
+
+model Subject {
+  id             String     @id @default(uuid())
+  code           String     @unique
+  title          String
+  credits        Int
+  semesterNumber Int
+  regulationId   String
+  regulation     Regulation @relation(fields: [regulationId], references: [id])
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id])
+
+  courseOfferings CourseOffering[]
+  examSessions    ExamSession[]
+  marks           Marks[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subjects")
+}
+
+model CourseOffering {
+  id         String   @id @default(uuid())
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  sectionId  String
+  section    Section  @relation(fields: [sectionId], references: [id])
+  facultyId  String
+  faculty    Faculty  @relation(fields: [facultyId], references: [id])
+  semesterId String
+  semester   Semester @relation(fields: [semesterId], references: [id])
+
+  timetableSlots     TimetableSlot[]
+  attendanceSessions AttendanceSession[]
+  topicsTaught       TopicsTaught[]
+  materials          Material[]
+  assignments        Assignment[]
+  quizzes            Quiz[]
+  onlineClasses      OnlineClass[]
+  groups             Group[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectId, sectionId, semesterId])
+  @@map("course_offerings")
+}
+
+model TimetableSlot {
+  id               String         @id @default(uuid())
+  sectionId        String
+  section          Section        @relation(fields: [sectionId], references: [id])
+  dayOfWeek        DayOfWeek
+  hourIndex        Int
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  startTime        String // "09:00"
+  endTime          String // "09:50"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sectionId, dayOfWeek, hourIndex])
+  @@map("timetable_slots")
+}
+
+// ──────────────────────────────────────────
+// ATTENDANCE
+// ──────────────────────────────────────────
+
+model AttendanceSession {
+  id               String         @id @default(uuid())
+  courseOfferingId  String
+  courseOffering    CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  date             DateTime
+  hourIndex        Int
+  status           SessionStatus  @default(ACTIVE)
+
+  records AttendanceRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id                  String            @id @default(uuid())
+  attendanceSessionId String
+  attendanceSession   AttendanceSession @relation(fields: [attendanceSessionId], references: [id])
+  studentId           String
+  student             Student           @relation(fields: [studentId], references: [id])
+  status              AttendanceStatus  @default(PRESENT)
+  markedAt            DateTime          @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([attendanceSessionId, studentId])
+  @@map("attendance_records")
+}
+
+// ──────────────────────────────────────────
+// TOPICS & LMS
+// ──────────────────────────────────────────
+
+model TopicsTaught {
+  id               String         @id @default(uuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  date             DateTime
+  hourIndex        Int
+  description      String
+  facultyId        String
+  faculty          Faculty        @relation(fields: [facultyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("topics_taught")
+}
+
+model Material {
+  id               String         @id @default(uuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  title            String
+  fileUrl          String
+  createdById      String
+  createdBy        User           @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("materials")
+}
+
+model Assignment {
+  id               String         @id @default(uuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  title            String
+  description      String?
+  dueAt            DateTime
+  createdById      String
+  createdBy        User           @relation(fields: [createdById], references: [id])
+
+  submissions Submission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+model Submission {
+  id           String     @id @default(uuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id])
+  fileUrl      String
+  submittedAt  DateTime   @default(now())
+  grade        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@map("submissions")
+}
+
+model Quiz {
+  id               String         @id @default(uuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  title            String
+  durationMin      Int
+  startsAt         DateTime
+  endsAt           DateTime
+
+  attempts QuizAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("quizzes")
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  score       Float?
+  submittedAt DateTime @default(now())
+
+  @@unique([quizId, studentId])
+  @@map("quiz_attempts")
+}
+
+model PointsLedger {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@map("points_ledger")
+}
+
+// ──────────────────────────────────────────
+// EVENTS
+// ──────────────────────────────────────────
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  formUrl     String?
+  startsAt    DateTime
+  expiresAt   DateTime
+  createdById String
+  createdBy   User        @relation("EventCreator", fields: [createdById], references: [id])
+  status      EventStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("events")
+}
+
+// ──────────────────────────────────────────
+// EXAMINATION
+// ──────────────────────────────────────────
+
+model ExamSession {
+  id         String   @id @default(uuid())
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  date       DateTime
+  slot       String // "FN" or "AN"
+  semesterId String
+  semester   Semester @relation(fields: [semesterId], references: [id])
+
+  answerScripts AnswerScript[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("exam_sessions")
+}
+
+model HallTicket {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  semesterId String
+  semester   Semester @relation(fields: [semesterId], references: [id])
+  fileUrl    String
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, semesterId])
+  @@map("hall_tickets")
+}
+
+model AnswerScript {
+  id            String      @id @default(uuid())
+  examSessionId String
+  examSession   ExamSession @relation(fields: [examSessionId], references: [id])
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id])
+  barcodeValue  String      @unique
+  fileUrl       String?
+  uploadedAt    DateTime?
+
+  evaluationTask EvaluationTask?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([examSessionId, studentId])
+  @@map("answer_scripts")
+}
+
+model EvaluationTask {
+  id                String         @id @default(uuid())
+  answerScriptId    String         @unique
+  answerScript      AnswerScript   @relation(fields: [answerScriptId], references: [id])
+  assignedFacultyId String
+  assignedFaculty   Faculty        @relation(fields: [assignedFacultyId], references: [id])
+  status            EvalTaskStatus @default(ASSIGNED)
+  submittedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("evaluation_tasks")
+}
+
+model Marks {
+  id                   String      @id @default(uuid())
+  studentId            String
+  student              Student     @relation(fields: [studentId], references: [id])
+  subjectId            String
+  subject              Subject     @relation(fields: [subjectId], references: [id])
+  semesterId           String
+  semester             Semester    @relation(fields: [semesterId], references: [id])
+  mid1                 Float?
+  mid2                 Float?
+  external             Float?
+  internal             Float?
+  final                Float?
+  status               MarksStatus @default(DRAFT)
+  verifiedByExamCellId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, subjectId, semesterId])
+  @@map("marks")
+}
+
+// ──────────────────────────────────────────
+// AUDIT LOG
+// ──────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String
+  actorUser   User     @relation(fields: [actorUserId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  metaJson    String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ──────────────────────────────────────────
+// ANNOUNCEMENTS
+// ──────────────────────────────────────────
+
+model Announcement {
+  id           String   @id @default(uuid())
+  title        String
+  message      String
+  targetRole   String? // null=all, or "STUDENT","FACULTY","HOD" etc.
+  departmentId String?
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([targetRole])
+  @@index([createdById])
+  @@map("announcements")
+}
+
+// ──────────────────────────────────────────
+// TPO / PLACEMENTS
+// ──────────────────────────────────────────
+
+model PlacementDrive {
+  id               String                 @id @default(uuid())
+  companyName      String
+  role             String
+  description      String?
+  packageLPA       Float
+  eligibleBranches String // Comma-separated: "CSE,ECE,IT"
+  minCGPA          Float?
+  maxBacklogs      Int                    @default(0)
+  driveDate        DateTime
+  deadline         DateTime
+  location         String?
+  isActive         Boolean                @default(true)
+  createdById      String
+  createdBy        User                   @relation(fields: [createdById], references: [id])
+  applications     PlacementApplication[]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@map("placement_drives")
+}
+
+model PlacementApplication {
+  id        String         @id @default(uuid())
+  driveId   String
+  drive     PlacementDrive @relation(fields: [driveId], references: [id])
+  studentId String
+  student   Student        @relation(fields: [studentId], references: [id])
+  status    String         @default("APPLIED") // APPLIED, SHORTLISTED, SELECTED, REJECTED
+  resume    String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([driveId, studentId])
+  @@map("placement_applications")
+}
+
+// ──────────────────────────────────────────
+// ONLINE CLASSES
+// ──────────────────────────────────────────
+
+model OnlineClass {
+  id               String         @id @default(uuid())
+  courseOfferingId  String?
+  courseOffering    CourseOffering? @relation(fields: [courseOfferingId], references: [id])
+  title            String
+  description      String?
+  meetingLink      String?
+  roomName         String?
+  platform         String         @default("Google Meet") // Google Meet, Zoom, Teams, etc.
+  scheduledAt      DateTime
+  durationMinutes  Int            @default(60)
+  status           String         @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED, CANCELLED
+  createdById      String
+  createdBy        User           @relation("OnlineClassCreator", fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("online_classes")
+}
+
+// ──────────────────────────────────────────
+// CODE ARENA
+// ──────────────────────────────────────────
+
+model CodeProblem {
+  id                 String            @id @default(uuid())
+  title              String
+  description        String
+  difficulty         ProblemDifficulty @default(EASY)
+  tags               String            @default("")
+  inputFormat        String            @default("")
+  outputFormat       String            @default("")
+  constraints        String            @default("")
+  sampleInput        String            @default("")
+  sampleOutput       String            @default("")
+  testCasesJson      String            @default("[]")
+  points             Int               @default(10)
+  isActive           Boolean           @default(true)
+  createdByFacultyId String
+  createdByFaculty   Faculty           @relation(fields: [createdByFacultyId], references: [id])
+  submissions        CodeSubmission[]
+  contestProblems    ContestProblem[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@map("code_problems")
+}
+
+model CodeSubmission {
+  id            String      @id @default(uuid())
+  problemId     String
+  problem       CodeProblem @relation(fields: [problemId], references: [id])
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id])
+  language      String
+  code          String
+  status        String // ACCEPTED, WRONG_ANSWER
+  testsPassed   Int         @default(0)
+  totalTests    Int         @default(0)
+  vPointsEarned Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  @@map("code_submissions")
+}
+
+model CodeStreak {
+  studentId       String  @id
+  student         Student @relation(fields: [studentId], references: [id])
+  currentStreak   Int     @default(1)
+  longestStreak   Int     @default(1)
+  lastActiveDate  String
+  totalActiveDays Int     @default(1)
+
+  @@map("code_streaks")
+}
+
+model CodeNote {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  title     String
+  content   String
+  tags      String   @default("")
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("code_notes")
+}
+
+model CodeContest {
+  id                 String                 @id @default(uuid())
+  title              String
+  description        String?
+  startTime          DateTime
+  endTime            DateTime
+  createdByFacultyId String
+  createdByFaculty   Faculty                @relation(fields: [createdByFacultyId], references: [id])
+  problems           ContestProblem[]
+  participations     ContestParticipation[]
+  createdAt          DateTime               @default(now())
+
+  @@map("code_contests")
+}
+
+model ContestProblem {
+  id         String      @id @default(uuid())
+  contestId  String
+  contest    CodeContest @relation(fields: [contestId], references: [id])
+  problemId  String
+  problem    CodeProblem @relation(fields: [problemId], references: [id])
+  orderIndex Int
+
+  @@map("contest_problems")
+}
+
+model ContestParticipation {
+  id        String      @id @default(uuid())
+  contestId String
+  contest   CodeContest @relation(fields: [contestId], references: [id])
+  studentId String
+  student   Student     @relation(fields: [studentId], references: [id])
+  score     Int         @default(0)
+
+  @@unique([contestId, studentId])
+  @@map("contest_participations")
+}
+
+// ──────────────────────────────────────────
+// SKILL MODULES (In-App Courses)
+// ──────────────────────────────────────────
+
+model SkillCourse {
+  id          String            @id @default(uuid())
+  title       String
+  description String
+  tags        String // "Python, AI, C"
+  thumbnail   String?
+  isActive    Boolean           @default(true)
+  createdById String
+  createdBy   User              @relation(fields: [createdById], references: [id])
+  modules     SkillModule[]
+  enrollments SkillEnrollment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("skill_courses")
+}
+
+model SkillModule {
+  id         String        @id @default(uuid())
+  courseId   String
+  course     SkillCourse   @relation(fields: [courseId], references: [id])
+  title      String
+  orderIndex Int
+  lessons    SkillLesson[]
+  createdAt  DateTime      @default(now())
+
+  @@map("skill_modules")
+}
+
+model SkillLesson {
+  id         String      @id @default(uuid())
+  moduleId   String
+  module     SkillModule @relation(fields: [moduleId], references: [id])
+  title      String
+  content    String // Markdown notes
+  videoUrl   String?
+  orderIndex Int
+  createdAt  DateTime    @default(now())
+
+  @@map("skill_lessons")
+}
+
+model SkillEnrollment {
+  id          String      @id @default(uuid())
+  courseId    String
+  course      SkillCourse @relation(fields: [courseId], references: [id])
+  studentId   String
+  student     Student     @relation(fields: [studentId], references: [id])
+  progressPct Int         @default(0)
+  createdAt   DateTime    @default(now())
+
+  @@unique([courseId, studentId])
+  @@map("skill_enrollments")
+}
+
+// ──────────────────────────────────────────
+// FACULTY GROUPS & COMMUNICATION
+// ──────────────────────────────────────────
+
+model Group {
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  facultyId        String
+  faculty          Faculty           @relation(fields: [facultyId], references: [id])
+  courseOfferingId  String?
+  courseOffering    CourseOffering?   @relation(fields: [courseOfferingId], references: [id])
+  isActive         Boolean           @default(true)
+
+  members     GroupMember[]
+  messages    GroupMessage[]
+  assignments GroupAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([groupId, studentId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([groupId])
+  @@map("group_messages")
+}
+
+model GroupAssignment {
+  id          String             @id @default(uuid())
+  groupId     String
+  group       Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  dueAt       DateTime
+  maxPoints   Int                @default(10)
+
+  submissions GroupSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("group_assignments")
+}
+
+model GroupSubmission {
+  id              String          @id @default(uuid())
+  assignmentId    String
+  assignment      GroupAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student         @relation(fields: [studentId], references: [id])
+  content         String          // Text content of submission
+  fileUrl         String?         // Optional file attachment
+  status          String          @default("SUBMITTED") // SUBMITTED, REVIEWED, FLAGGED, VERIFIED
+  similarityScore Float?          // 0-100 plagiarism percentage
+  similarToId     String?         // ID of most-similar submission
+  vPointsAwarded  Int             @default(0)
+  facultyRemarks  String?
+  reviewedAt      DateTime?
+  submittedAt     DateTime        @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@map("group_submissions")
+}
+
+// ──────────────────────────────────────────
+// CLUBS & ORGANIZATIONS
+// ──────────────────────────────────────────
+
+model Club {
+  id            String       @id @default(uuid())
+  name          String       @unique
+  description   String?
+  category      String       @default("Technical") // Technical, Cultural, Sports, Social, Literary
+  logoUrl       String?
+  coverUrl      String?
+  coordinatorId String
+  coordinator   User         @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
+  isActive      Boolean      @default(true)
+
+  members  ClubMember[]
+  events   ClubEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("clubs")
+}
+
+model ClubMember {
+  id        String   @id @default(uuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  role      String   @default("MEMBER") // MEMBER, LEAD, CO_LEAD, SECRETARY
+  joinedAt  DateTime @default(now())
+
+  @@unique([clubId, studentId])
+  @@map("club_members")
+}
+
+model ClubEvent {
+  id          String   @id @default(uuid())
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  venue       String?
+  eventDate   DateTime
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("club_events")
+}

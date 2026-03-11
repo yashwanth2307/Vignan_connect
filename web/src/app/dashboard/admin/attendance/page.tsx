@@ -1,0 +1,143 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Users, Search, Loader2, Filter, GraduationCap } from 'lucide-react';
+import api from '@/lib/api';
+
+export default function AdminAttendancePage() {
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [sections, setSections] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
+    const [selectedDept, setSelectedDept] = useState('');
+    const [selectedSection, setSelectedSection] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
+
+    useEffect(() => {
+        api.get<any[]>('/departments').then(setDepartments).catch(() => { });
+        api.get<any[]>('/sections').then(setSections).catch(() => { });
+        setInitialLoad(false);
+    }, []);
+
+    const filteredSections = selectedDept
+        ? sections.filter(s => s.departmentId === selectedDept)
+        : sections;
+
+    const loadStudents = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (selectedSection) params.append('sectionId', selectedSection);
+            if (selectedDept) params.append('departmentId', selectedDept);
+            const data = await api.get<any[]>(`/attendance/students?${params.toString()}`);
+            setStudents(data);
+        } catch { setStudents([]); }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        if (selectedSection || selectedDept) {
+            loadStudents();
+        }
+    }, [selectedSection, selectedDept]);
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-2xl font-bold">Attendance — Student Registry</h2>
+                <p className="text-[hsl(var(--muted-foreground))]">View students by section, semester, and department</p>
+            </div>
+
+            {/* Filters */}
+            <Card>
+                <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Filter className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                        <span className="font-medium text-sm">Filter Students</span>
+                    </div>
+                    <div className="grid sm:grid-cols-3 gap-4 items-end">
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Department</label>
+                            <select
+                                className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
+                                value={selectedDept}
+                                onChange={e => { setSelectedDept(e.target.value); setSelectedSection(''); }}
+                            >
+                                <option value="">All Departments</option>
+                                {departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Section</label>
+                            <select
+                                className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
+                                value={selectedSection}
+                                onChange={e => setSelectedSection(e.target.value)}
+                            >
+                                <option value="">All Sections</option>
+                                {filteredSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                        <Button onClick={loadStudents} variant="gradient">
+                            <Search className="w-4 h-4 mr-1" /> Search
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Results */}
+            {loading ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
+            ) : students.length > 0 ? (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                            Showing <span className="text-blue-600 font-bold">{students.length}</span> students
+                        </span>
+                    </div>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {students.map((s, i) => (
+                            <motion.div key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
+                                <Card className="hover:shadow-soft transition-shadow">
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                            {s.user?.name?.charAt(0) || '?'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-sm truncate">{s.user?.name}</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.rollNo}</p>
+                                            <div className="flex gap-1.5 mt-1">
+                                                <Badge variant="outline" className="text-[10px]">{s.section?.name}</Badge>
+                                                <Badge variant="secondary" className="text-[10px]">{s.department?.code}</Badge>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            ) : (selectedSection || selectedDept) ? (
+                <Card>
+                    <CardContent className="py-12 text-center text-[hsl(var(--muted-foreground))]">
+                        <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <h3 className="font-semibold mb-1">No Students Found</h3>
+                        <p className="text-sm">No students are registered in the selected filters.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card>
+                    <CardContent className="py-12 text-center text-[hsl(var(--muted-foreground))]">
+                        <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <h3 className="font-semibold mb-1">Select Filters</h3>
+                        <p className="text-sm">Choose a department or section to view registered students.</p>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+}
