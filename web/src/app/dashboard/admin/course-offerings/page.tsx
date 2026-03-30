@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, Plus, Loader2, X } from 'lucide-react';
+import { GraduationCap, Plus, Loader2, X, Trash2, Edit2 } from 'lucide-react';
 import api from '@/lib/api';
 
 export default function CourseOfferingsPage() {
@@ -17,7 +17,7 @@ export default function CourseOfferingsPage() {
     const [semesters, setSemesters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ subjectId: '', sectionId: '', facultyId: '', semesterId: '' });
+    const [form, setForm] = useState({ id: '', subjectId: '', sectionId: '', facultyId: '', semesterId: '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -50,12 +50,25 @@ export default function CourseOfferingsPage() {
         setSaving(true);
         setError('');
         try {
-            await api.post('/course-offerings', form);
+            if (form.id) {
+                await api.put(`/course-offerings/${form.id}`, { subjectId: form.subjectId, sectionId: form.sectionId, facultyId: form.facultyId });
+            } else {
+                await api.post('/course-offerings', { subjectId: form.subjectId, sectionId: form.sectionId, facultyId: form.facultyId });
+            }
             setShowForm(false);
-            setForm({ subjectId: '', sectionId: '', facultyId: '', semesterId: '' });
+            setForm({ id: '', subjectId: '', sectionId: '', facultyId: '', semesterId: '' });
             await load();
         } catch (err: any) { setError(err.message); }
         setSaving(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this course offering? This will clear related timetable slots and attendance records.')) return;
+        try {
+            setLoading(true);
+            await api.delete(`/course-offerings/${id}`);
+            await load();
+        } catch (err: any) { alert(err.message); setLoading(false); }
     };
 
     return (
@@ -129,6 +142,16 @@ export default function CourseOfferingsPage() {
                                     <div className="flex items-center gap-2">
                                         <Badge variant="secondary">{co.faculty?.user?.name || 'N/A'}</Badge>
                                         <Badge variant="outline">{co.section?.department?.name || ''}</Badge>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => {
+                                            setForm({ id: co.id, subjectId: co.subjectId, sectionId: co.sectionId, facultyId: co.facultyId, semesterId: co.semesterId });
+                                            setShowForm(true);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}>
+                                            <Edit2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDelete(co.id)}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>

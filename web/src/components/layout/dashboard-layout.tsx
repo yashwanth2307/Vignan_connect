@@ -135,8 +135,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="p-4 flex items-center gap-3 border-b border-[hsl(var(--border)/0.5)]">
-                <div className="w-10 h-10 rounded-full bg-white border-2 border-blue-100 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-                    <Image src="/images/logo.png" alt="V-Connect" width={32} height={32} className="object-contain" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                    <span className="text-white font-black text-xl tracking-tighter">V</span>
                 </div>
                 <AnimatePresence>
                     {!collapsed && (
@@ -146,8 +146,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                             exit={{ opacity: 0, width: 0 }}
                             className="overflow-hidden whitespace-nowrap"
                         >
-                            <p className="font-bold text-sm">V-Connect</p>
-                            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">VGNT</p>
+                            <p className="font-bold text-sm tracking-widest text-blue-700 dark:text-blue-400">VIGNAN</p>
+                            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">CONNECT</p>
                         </motion.div>
                     )}
                 </AnimatePresence>

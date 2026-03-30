@@ -118,6 +118,14 @@ export class CourseOfferingsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.courseOffering.delete({ where: { id } });
+    // Delete relational references to avoid foreign key constraint errors
+    await this.prisma.$transaction([
+      this.prisma.timetableSlot.deleteMany({ where: { courseOfferingId: id } }),
+      this.prisma.attendanceRecord.deleteMany({ where: { attendanceSession: { courseOfferingId: id } } }),
+      this.prisma.attendanceSession.deleteMany({ where: { courseOfferingId: id } }),
+      // Remove the offering itself
+      this.prisma.courseOffering.delete({ where: { id } }),
+    ]);
+    return { success: true, message: 'Course offering and associated data removed' };
   }
 }
