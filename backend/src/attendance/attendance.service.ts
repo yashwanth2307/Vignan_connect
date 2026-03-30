@@ -97,18 +97,25 @@ export class AttendanceService {
     }[],
     userId: string,
   ) {
-    const faculty = await this.prisma.faculty.findUnique({ where: { userId } });
-    if (!faculty) throw new ForbiddenException('Not a faculty member');
+    const userRoleInfo = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (!userRoleInfo) throw new ForbiddenException('User not found');
+    const isAdmin = userRoleInfo.role === 'ADMIN';
 
     const session = await this.prisma.attendanceSession.findUnique({
       where: { id: sessionId },
       include: { courseOffering: true },
     });
     if (!session) throw new NotFoundException('Session not found');
-    if (session.courseOffering.facultyId !== faculty.id) {
-      throw new ForbiddenException('Not your session');
+
+    if (!isAdmin) {
+        const faculty = await this.prisma.faculty.findUnique({ where: { userId } });
+        if (!faculty) throw new ForbiddenException('Not a faculty member');
+        if (session.courseOffering.facultyId !== faculty.id) {
+            throw new ForbiddenException('Not your session');
+        }
     }
-    if (session.isLocked) {
+
+    if (session.isLocked && !isAdmin) {
       throw new BadRequestException('Session is locked and cannot be modified');
     }
 
@@ -266,4 +273,80 @@ export class AttendanceService {
       orderBy: { date: 'desc' },
     });
   }
+
+  // ── Admin: Reset attendance for a session (delete all records) ──
+  async resetSessionAttendance(sessionId: string) {
+    const session = await this.prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    const deleted = await this.prisma.attendanceRecord.deleteMany({
+      where: { attendanceSessionId: sessionId },
+    });
+
+    // Reopen the session so faculty can re-mark
+    await this.prisma.attendanceSession.update({
+      where: { id: sessionId },
+      data: { status: 'ACTIVE', isLocked: false },
+    });
+
+    return {
+      message: "Reset " + deleted.count + " attendance records. Session is now active again.",
+      deletedCount: deleted.count,
+    };
+  }
+
+  // ── Admin: Delete a session entirely ──
+  async deleteSession(sessionId: string) {
+    const session = await this.prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    // Delete records first
+    await this.prisma.attendanceRecord.deleteMany({
+      where: { attendanceSessionId: sessionId },
+    });
+
+    await this.prisma.attendanceSession.delete({
+      where: { id: sessionId },
+    });
+
+    return { message: 'Session and all attendance records deleted.' };
+  }
+
+  // ── Admin: Bulk reset all attendance for a section (fresh start) ──
+  async resetSectionAttendance(sectionId: string) {
+    // Find all sessions for this section's course offerings
+    const sessions = await this.prisma.attendanceSession.findMany({
+      where: {
+        courseOffering: { sectionId },
+      },
+      select: { id: true },
+    });
+
+    if (sessions.length === 0) {
+      return { message: 'No attendance sessions found for this section.', deletedSessions: 0, deletedRecords: 0 };
+    }
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    // Delete all records
+    const deletedRecords = await this.prisma.attendanceRecord.deleteMany({
+      where: { attendanceSessionId: { in: sessionIds } },
+    });
+
+    // Delete all sessions
+    const deletedSessions = await this.prisma.attendanceSession.deleteMany({
+      where: { id: { in: sessionIds } },
+    });
+
+    return {
+      message: "Reset complete. Deleted " + deletedSessions.count + " sessions and " + deletedRecords.count + " records.",
+      deletedSessions: deletedSessions.count,
+      deletedRecords: deletedRecords.count,
+    };
+  }
 }
+

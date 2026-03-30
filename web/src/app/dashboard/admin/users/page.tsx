@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Loader2, X, UserCheck, UserX, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldCheck, Trash2 } from 'lucide-react';
+import { Users, Plus, Loader2, X, UserCheck, UserX, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldCheck, Trash2, Pencil } from 'lucide-react';
 import api from '@/lib/api';
 import * as XLSX from 'xlsx';
 
@@ -42,6 +42,10 @@ export default function UsersPage() {
     const [facultyBulkUploading, setFacultyBulkUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const facultyFileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Edit state
+    const [editingUser, setEditingUser] = useState<any>(null);
+    const [editForm, setEditForm] = useState<any>({});
 
     const closeAllForms = () => {
         setShowStudentForm(false);
@@ -55,6 +59,8 @@ export default function UsersPage() {
         setBulkResult(null);
         setFacultyBulkData([]);
         setFacultyBulkResult(null);
+        setEditingUser(null);
+        setEditForm({});
     };
 
     const load = async () => {
@@ -138,6 +144,32 @@ export default function UsersPage() {
             await api.delete(`/users/${id}`);
             await load();
         } catch (err: any) { alert(err.message); }
+    };
+
+    const handleEditClick = (user: any) => {
+        closeAllForms();
+        setEditingUser(user);
+        setEditForm({
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            rollNo: user.student?.rollNo || '',
+            empId: user.faculty?.empId || ''
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const submitEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        setError('');
+        try {
+            await api.patch(`/users/${editingUser.id}`, editForm);
+            setEditingUser(null);
+            setEditForm({});
+            await load();
+        } catch (err: any) { setError(err.message); }
+        setSaving(false);
     };
 
     // -- Excel/CSV Upload Handler for Students --
@@ -824,6 +856,36 @@ export default function UsersPage() {
                 </motion.div>
             )}
 
+            {/* Edit User Form */}
+            {editingUser && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                    <Card className="border-2 border-amber-300 dark:border-amber-700">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="flex items-center gap-2"><Pencil className="w-5 h-5 text-amber-500" /> Edit User details</CardTitle>
+                            <Button variant="ghost" size="icon" onClick={() => setEditingUser(null)}><X className="w-4 h-4" /></Button>
+                        </CardHeader>
+                        <CardContent>
+                            {error && <div className="text-red-500 text-sm mb-3 bg-red-50 dark:bg-red-950/30 p-3 rounded-xl">{error}</div>}
+                            <form onSubmit={submitEdit} className="grid sm:grid-cols-3 gap-4">
+                                <div className="space-y-1"><Label>Name</Label><Input value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} required /></div>
+                                <div className="space-y-1"><Label>Email</Label><Input type="email" value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })} required /></div>
+                                <div className="space-y-1"><Label>Phone</Label><Input value={editForm.phone || ''} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} /></div>
+                                {editingUser.role === 'STUDENT' && (
+                                    <div className="space-y-1"><Label>Roll Number</Label><Input value={editForm.rollNo || ''} onChange={e => setEditForm({ ...editForm, rollNo: e.target.value })} required /></div>
+                                )}
+                                {editingUser.role === 'FACULTY' && (
+                                    <div className="space-y-1"><Label>Employee ID</Label><Input value={editForm.empId || ''} onChange={e => setEditForm({ ...editForm, empId: e.target.value })} required /></div>
+                                )}
+                                <div className="flex items-end sm:col-span-3 justify-end mt-2 pt-2 border-t border-[hsl(var(--border))]">
+                                    <Button type="submit" disabled={saving} variant="gradient">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update User'}</Button>
+                                    <Button type="button" variant="outline" className="ml-2" onClick={() => setEditingUser(null)}>Cancel</Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
+
             {loading ? (
                 <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
             ) : (
@@ -855,9 +917,14 @@ export default function UsersPage() {
                                             {user.isActive ? <UserCheck className="w-4 h-4 text-green-500" /> : <UserX className="w-4 h-4 text-red-500" />}
                                         </Button>
                                         {user.role !== 'ADMIN' && (
-                                            <Button variant="ghost" size="icon" onClick={() => deleteUser(user.id, user.name)} title="Delete User Permanently">
-                                                <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
-                                            </Button>
+                                            <>
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Edit User">
+                                                    <Pencil className="w-4 h-4 text-amber-500 hover:text-amber-600" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => deleteUser(user.id, user.name)} title="Delete User Permanently">
+                                                    <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
+                                                </Button>
+                                            </>
                                         )}
                                     </div>
                                 </CardContent>

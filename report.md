@@ -72,7 +72,7 @@ Special thanks go to my teammates, who helped me to assemble the parts and gave 
 
 As educational institutions evolve into massive operational juggernauts, managing academics, student attendance, rigorous examinations, real-time timetable generation, and university-wide placements through heterogeneous legacy systems becomes highly inefficient. Consequently, data silos form, communication gaps widen, and institutional productivity sharply diminishes. To counter these systemic issues, this project proposes and implements **V-Connect 2.0**, a comprehensively scaled, cloud-native Enterprise Resource Planning (ERP) application engineered explicitly for the Vignan Group of Institutions.
 
-V-Connect 2.0 fundamentally digitizes paper-bound workflows into a centralized, highly interoperable framework. The application employs a sophisticated architectural foundation utilizing Node.js, NestJS, Next.js, and Prisma ORM alongside a PostgreSQL relational database. Key modules include a multi-layered Role-Based Access Control (RBAC) system for Admins, HODs, Faculty, Students, and the Exam Cell. The system uniquely implements algorithm-driven collision-free timetable generation, real-time WebSockets integration for instantaneous attendance monitoring utilizing rotating QR codes, an end-to-end examination administration module leveraging cryptographic barcode assignment for blind evaluation, and a Training & Placement (TPO) dashboard tracking dynamic student placement pipelines. 
+V-Connect 2.0 fundamentally digitizes paper-bound workflows into a centralized, highly interoperable framework. The application employs a sophisticated architectural foundation utilizing Node.js, NestJS, Next.js, and Prisma ORM alongside a PostgreSQL relational database. Key modules include a multi-layered Role-Based Access Control (RBAC) system for Admins, HODs, Faculty, Students, and the Exam Cell. The system uniquely implements algorithm-driven collision-free timetable generation, real-time WebSockets integration for instantaneous attendance monitoring utilizing rotating QR codes, and a seamless Online Classes module equipping faculty with built-in interactive whiteboards to ensure dynamic educational continuity. 
 
 By eliminating the manual data entry bottleneck, V-Connect 2.0 establishes an unprecedented level of institutional transparency and administrative efficiency while laying a robust architectural foundation capable of scaling alongside future academic requirements.
 
@@ -114,9 +114,9 @@ By eliminating the manual data entry bottleneck, V-Connect 2.0 establishes an un
 6.1 Authentication and Security Infrastructure
 6.2 Academic Administration and Course Management
 6.3 Automated Timetable Generation Heuristic
-6.4 Advanced Examination & Marks Processing
-6.5 Code Arena & Skill Development Module
-6.6 Placement Drive Tracking System
+6.4 Online Classes & Virtual Learning Engine
+6.5 Administrative Attendance Overrides & Audits
+6.6 Semester Promotion & Alumni Archiving
 6.7 Implementation Stack Overview
 
 **CHAPTER 7: SYSTEM TESTING**
@@ -143,17 +143,17 @@ By eliminating the manual data entry bottleneck, V-Connect 2.0 establishes an un
 In modern academic ecosystems, operational efficiency strictly dictates educational effectiveness. With hundreds of faculty members managing thousands of students across vastly distinct departments, the flow of administrative data becomes overwhelmingly complex. Managing the lifecycle of a student—from course enrollment and rigorous attendance monitoring to examination evaluations and campus placement recruitment—requires an intelligent digital backbone. Enter V-Connect 2.0, a unified campus Enterprise Resource Planning (ERP) system constructed upon modern, full-stack reactive JavaScript paradigms.
 
 ### 1.2 Purpose of the Proposed Model
-The underlying ethos driving V-Connect 2.0 is centralization through technological modernization. Existing systems require constant clerical transcription. For example, manual attendance registers are transcribed into excel sheets, exams are distributed physically leading to tampering risks, and timetables are charted iteratively on whiteboards often generating frustrating faculty overlap clashes. V-Connect 2.0 acts as the ultimate digital cure to administrative friction by automating logic securely within the cloud.
+The underlying ethos driving V-Connect 2.0 is centralization through technological modernization. Existing systems require constant clerical transcription. For example, manual attendance registers are transcribed into excel sheets and timetables are charted iteratively on whiteboards often generating frustrating faculty overlap clashes. V-Connect 2.0 acts as the ultimate digital cure to administrative friction by automating logic securely within the cloud.
 
 ### 1.3 Scope of the System
 The project covers end-to-end operational software requirements for medium-to-large engineering colleges. The scope natively covers:
 - Core Academic Structures (Regulations, Departments, Sections, Subjects, Semesters).
 - Faculty Workflow Management (Attendance logging, Assignment dispatching, Syllabus coverage documentation).
 - Complete Student Telemetry (Graphical attendance dashboards, real-time result viewing, in-app placement module applications).
-- Specialized Controller of Examinations workflows.
+- Deep Online Classroom logic with faculty execution roles.
 
 ### 1.4 Problem Statement
-"To engineer, develop, and deploy a seamless, highly concurrent web application eliminating institutional data silos, replacing manual record-keeping with an artificially assisted digital platform that enforces strict Role-Based security conventions, ensuring maximum accountability across student attendance, examination integrity, and administrative efficiency."
+"To engineer, develop, and deploy a seamless, highly concurrent web application eliminating institutional data silos, replacing manual record-keeping with an artificially assisted digital platform that enforces strict Role-Based security conventions, ensuring maximum accountability across student attendance, virtual classroom continuity, and administrative efficiency."
 
 ### 1.5 Core Objectives
 1. Automate and algorithmically optimize Timetable creation dynamically preventing faculty allocation collisions.
@@ -197,8 +197,8 @@ The pre-existing methodologies employed at collegiate levels mostly consist of d
 ### 3.3 Proposed System Architecture and Solutions
 The proposed V-Connect 2.0 architecture centralizes all domains. 
 1. **Dynamic Schedule Checking**: The NestJS Timetabling service utilizes a multi-dimensional array cross-referencing global faculty `slot availability`.
-2. **Blind Examination Execution**: V-Connect auto-generates randomized crypto-secure barcodes for answer scripts. The evaluator only submits marks against the barcode, preventing bias.
-3. **Unified Application Triggers**: The Placements dashboard filters drives exclusively to eligible students (via branch filters and minimum CGPA criteria calculations) allowing native one-click applying.
+2. **Session-Locked Attendance Auditing**: Attendance modifications are programmatically impossible post-class, except by explicitly authorized Administrative overrides.
+3. **Native Virtual Classrooms**: Avoids fragmented Zoom links by utilizing a natively integrated video framework complete with Host-only whiteboard tools.
 
 ### 3.4 Feasibility Study
 - **Technical Feasibility**: Since the application is browser-dependent and server-rendered, the institution avoids needing to physically upgrade faculty desktops. The use of Node.js ensures massive I/O concurrency.
@@ -231,7 +231,7 @@ The proposed V-Connect 2.0 architecture centralizes all domains.
 ### 4.3 Functional Requirements
 - **FR1 (Authentication)**: The system MUST securely hash all passwords utilizing bcrypt (12 rounds) and govern APIs using JSON Web Tokens.
 - **FR2 (Automated Intake)**: System MUST possess a permissive Bulk-Upload CSV algorithm that uses RegEx fuzzy matching (e.g., converting "sem no." into "semesterNumber") for rapid administrative processing.
-- **FR3 (Placement Flow)**: Students MUST be able to view drives, while Admins MUST possess the UI to move applications sequentially through [APPLIED] -> [SHORTLISTED] -> [SELECTED].
+- **FR3 (Virtual Classes)**: Faculty MUST be able to launch online digital classrooms wherein they retain Host privileges like Mute All and Interactive Canvas sharing.
 
 ### 4.4 Non-Functional Requirements
 - **Security**: Strict enforcement of CORS, JWT expiries (Access: 15m, Refresh: 7d), and Role-Based Guards evaluating `@Roles()` decorators before transaction execution.
@@ -291,7 +291,7 @@ The core of V-Connect 2.0 relies on an impeccably defined relational database sc
 - **Student Profile**: Bound 1:1 with User, appending Roll Number, Section foreign keys, and computational points like `vPointsEarned`.
 - **Course Offerings Entity**: Traces the triad combination of Subject + Section + Faculty. This guarantees multiple faculty members can teach the same subject to different sections securely.
 - **Attendance Session**: Maps 1:N with standard `Attendance Records`, detailing the exact datetime, subject being taught, and boolean presence.
-- **Exam Answer Scripts**: Possesses unique Barcode schemas avoiding mapped Student ID linkages inherently until final result locking.
+- **Online Class Entity**: Maps individual scheduled virtual streams alongside Platform rules and scheduled runtime arrays.
 
 ---
 
@@ -316,17 +316,14 @@ Timetable scheduling is fundamentally an NP-hard allocation dispute. The NestJS 
 2. Loops exclusively to isolate 2+ consecutive blocks specifically for Laboratory courses mapping `isLab: true`.
 3. Verifies cross-departmental collision dynamically. Using an overarching variable (`facultySchedule`), the nested loops query all other active sections globally ensuring that if `Professor X` is teaching "CSE-A at 9AM on Monday", assigning him to "CSE-B at 9AM Monday" results in an immediate fallback and allocation shifting.
 
-### 6.4 Advanced Examination & Marks Processing
-The Examination logic breaks away from traditional subjective marking. Subjects are bound to an `ExamSession`. Students receive dynamically barcoded Answer Scripts. Faculty evaluation endpoints only display the blind barcode identifier. Only when `EXAM_CELL` invokes the PATCH lock request does the barcode decryption merge relational schemas mathematically appending validated integers into the Student's permanent result ledger.
+### 6.4 Administrative Attendance Overrides
+While faculty members execute daily attendance logs within a tightly regulated temporal window, errors occur. The system implements a separate secure pathway exclusively accessible by the `ADMIN` role. This overrides the intrinsic `isLocked` Boolean flag associated with past Attendance Sessions, allowing administrative clerks to manually rectify anomalies without globally unprotecting the architectural flow.
 
-### 6.5 Code Arena & Skill Development Module
-Integrating LMS capabilities inherently into ERPs raises student platform retention. "Code Arena" functions as an internal structural competitive programming portal. Faculty upload hidden Test Case JSONs alongside algorithmic problem descriptions. Students execute code within standard IDE parameters. The server executes Sandbox comparisons awarding `V-Points` upon success, incrementing Student "Streaks" gamifying educational interaction fundamentally. 
+### 6.5 Virtual Classroom & Host Emulation
+Bypassing the requirement for external video conferencing subscriptions, V-Connect 2.0 incorporates `VConnectClassroom` — a natively built React component. Using browser MediaDevices APIs, it broadcasts audio/visual channels. The component actively interprets the `isHost` prop, granting Faculty users explicit UI actions: an interactive Whiteboard overlay and global 'Mute All' triggers, features fundamentally un-renderable in a Student's DOM.
 
-### 6.6 Placement Drive Tracking System
-The TPO module simplifies corporate pipeline mapping. The `PlacementDrive` table defines constraints (e.g., minimum CGPA, specific B.Tech branches). When a student authenticates, their dashboard conditionally masks non-eligible drives. Admins subsequently maneuver applicants interactively tracking recruitment funnels holistically resulting in transparent analytics directly displayable via React Recharts visualization libraries.
-
-### 6.7 Groups & AI Plagiarism Check Module
-A unique addition to the V-Connect ecosystem is AI-assisted code evaluation. The system computes a deeply woven **Jaccard n-gram similarity** mapping matching structural variable declarations and keyword loops across all assignment submissions. If similarity breaches the 70% threshold, the system automatically flags the submission notifying the controlling HOD simultaneously.
+### 6.6 Semantic Semester Promotion & Archiving
+A uniquely complex problem involves migrating academic data seamlessly between years. The implemented Promotion Module queries explicitly targeted student datasets and transacts database updates shifting their `currentSemester` integers. Crucially, as students breach the 8th semester, the algorithm gracefully rewrites their fundamental system `UserRole` from `STUDENT` to `ALUMNI`, archiving their status while retaining historical analytical records intact.
 
 ---
 
@@ -339,7 +336,7 @@ Component isolation testing ensured rigorous stability. Specific algorithms—mo
 Backend-to-Database bridging underwent stressful transaction verification via Prisma middleware. The complex query involving joining the Student Roll, validating through Subject registration restrictions, and accurately saving the Attendance Boolean under intensive millisecond delays proved flawlessly intact demonstrating the architectural reliability of SQLite and PostgreSQL.
 
 ### 7.3 System Testing Verification
-A complete black-box verification ensured module cohesiveness. The examination pipeline successfully navigated from Admin generation -> Script barcoding -> Faculty Submission Phase -> Exam Cell Validation -> Permanent Result release exclusively isolating data permissions appropriately per role across the Next.js visual layer.
+A complete black-box verification ensured module cohesiveness. The academic lifecycle effectively triggered from Timetable generation -> Attendance Locking -> Semester Promotion -> Alumni archiving exclusively isolating data permissions appropriately per role across the Next.js visual layer.
 
 ### 7.4 User Acceptance Testing
 Final validations simulated physical collegiate demands. Over 2,000 synthetic database rows simulating Subjects, Faculties, and Students were pushed. API fetch times consistently maintained latencies under 200ms indicating UI blockages were nonexistent thus highly acceptable for operational faculty tasks.
@@ -351,7 +348,7 @@ Final validations simulated physical collegiate demands. Over 2,000 synthetic da
 ### 8.1 Functional Outcomes
 - **Zero Configuration Overlap**: Timetables successfully generated 6-day academic routines across dozens of simulated sections demonstrating exactly zero faculty collisions.
 - **Rapid Navigation**: Leveraging Next.js Server Side Routing guarantees that dashboard hopping across vastly separate operations—from placements to marks processing—occurred entirely without rigid browser reloading loops.
-- **Blind Integrity Secured**: The examination module completely obscured identifiable student variables prior to grade locking.
+- **Hierarchical Dominance Maintained**: The `isHost` variables properly localized rendering logic for faculty inside video streams, maintaining strict application state.
 - **Elimination of Proxies**: Local network simulated WebSocket testing guaranteed dynamic updating token sequences strictly limited to 6 seconds mathematically negating long-distance attendance spoofing via text message.
 
 ### 8.2 Performance Evaluations

@@ -392,6 +392,44 @@ export class UsersService {
     });
   }
 
+  async updateUser(id: string, dto: any) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    
+    // Simple top-level update: name, email, phone
+    const userUpdate: any = {};
+    if (dto.name) userUpdate.name = dto.name;
+    if (dto.email) userUpdate.email = dto.email;
+    if (dto.phone) userUpdate.phone = dto.phone;
+
+    if (Object.keys(userUpdate).length > 0) {
+      await this.prisma.user.update({
+        where: { id },
+        data: userUpdate,
+      });
+    }
+
+    if (user.role === 'STUDENT' && dto.rollNo) {
+        const student = await this.prisma.student.findUnique({ where: { userId: id } });
+        if (student) {
+            await this.prisma.student.update({
+                where: { id: student.id },
+                data: { rollNo: dto.rollNo }
+            });
+        }
+    } else if (user.role === 'FACULTY' && dto.empId) {
+        const faculty = await this.prisma.faculty.findUnique({ where: { userId: id } });
+        if (faculty) {
+            await this.prisma.faculty.update({
+                where: { id: faculty.id },
+                data: { empId: dto.empId }
+            });
+        }
+    }
+
+    return { message: 'User updated successfully' };
+  }
+
   async getStudentsBySection(sectionId: string) {
     return this.prisma.student.findMany({
       where: { sectionId },

@@ -252,6 +252,10 @@ CS303L,Data Structures Lab,1,3,3,LAB,true,false,R22,CSE`;
                                         <input type="number" value={singleData.semesterNumber} onChange={e => setSingleData({...singleData, semesterNumber: parseInt(e.target.value) || 0})} className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm" />
                                     </div>
                                     <div className="space-y-1">
+                                        <label className="text-sm font-medium">Weekly Hours *</label>
+                                        <input type="number" value={singleData.weeklyHours} onChange={e => setSingleData({...singleData, weeklyHours: parseInt(e.target.value) || 0})} className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm" />
+                                    </div>
+                                    <div className="space-y-1">
                                         <label className="text-sm font-medium">Type</label>
                                         <select value={singleData.subjectType} onChange={e => setSingleData({...singleData, subjectType: e.target.value, isLab: e.target.value === 'LAB'})} className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm">
                                             <option value="THEORY">THEORY</option>

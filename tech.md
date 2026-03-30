@@ -102,8 +102,6 @@
 │  ┌─────────────────── MODULES ──────────────────────────────┐  │
 │  │ Auth │ Users │ Departments │ Sections │ Regulations      │  │
 │  │ Subjects │ CourseOfferings │ Timetable │ Attendance      │  │
-│  │ Exam │ Announcements │ Placements │ OnlineClasses        │  │
-│  │ CodeArena │ SkillCourses │ AdminBot │ Groups │ Webhooks  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                │
 │  ┌───────────────── INFRASTRUCTURE ─────────────────────────┐  │
@@ -234,23 +232,15 @@ app.useGlobalPipes(new ValidationPipe({
 ```
 User (1) ──── (0..1) Student ──── (N) AttendanceRecord
   │                    │
-  │                    ├──── (N) CodeSubmission
-  │                    ├──── (N) CodeStreak (1)
-  │                    ├──── (N) ContestParticipation
   │                    ├──── (N) SkillEnrollment
   │                    ├──── (N) PlacementApplication
-  │                    ├──── (N) Marks
   │                    └──── (N) HallTicket
   │
   ├── (0..1) Faculty ──── (N) CourseOffering
-  │                        ├──── (N) CodeProblem
-  │                        ├──── (N) CodeContest
-  │                        └──── (N) EvaluationTask
   │
   ├── (N) AuditLog
   ├── (N) Announcement
   ├── (N) OnlineClass
-  └── (N) PlacementDrive
 
 Department (1) ──── (N) Section ──── (N) CourseOffering
                                        ├──── (N) TimetableSlot
@@ -261,9 +251,7 @@ Department (1) ──── (N) Section ──── (N) CourseOffering
                                        └──── (N) OnlineClass
 
 Regulation (1) ──── (N) Semester ──── (N) CourseOffering
-                      │                ├──── (N) ExamSession ──── (N) AnswerScript
                       │                ├──── (N) HallTicket
-                      │                └──── (N) Marks
                       └──── (N) Subject ──── (N) CourseOffering
 ```
 
@@ -277,11 +265,9 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 | `ApprovalStatus`    | `PENDING`, `APPROVED`, `REJECTED`                    |
 | `SessionStatus`     | `ACTIVE`, `CLOSED`, `EXPIRED`                        |
 | `EvalTaskStatus`    | `ASSIGNED`, `IN_PROGRESS`, `SUBMITTED`, `VERIFIED`, `LOCKED` |
-| `MarksStatus`       | `DRAFT`, `SUBMITTED`, `VERIFIED`, `LOCKED`, `RELEASED` |
 | `EventStatus`       | `DRAFT`, `PUBLISHED`, `CLOSED`, `EXPIRED`            |
 | `DayOfWeek`         | `MONDAY` – `SATURDAY`                                |
 | `ProblemDifficulty` | `EASY`, `MEDIUM`, `HARD`                             |
-| `ContestStatus`     | `UPCOMING`, `LIVE`, `COMPLETED`                      |
 
 ### 4.4 Key Models (30 total)
 
@@ -304,24 +290,9 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 | Assignment           | `assignments`           | UUID        | courseOfferingId, dueAt                         |
 | Submission           | `submissions`           | UUID        | assignment + student (unique)                  |
 | Quiz                 | `quizzes`               | UUID        | courseOfferingId, durationMin, startsAt/endsAt  |
-| ExamSession          | `exam_sessions`         | UUID        | subjectId, date, slot (FN/AN)                  |
-| AnswerScript         | `answer_scripts`        | UUID        | barcodeValue (unique)                          |
-| EvaluationTask       | `evaluation_tasks`      | UUID        | answerScriptId (unique), status                |
-| Marks                | `marks`                 | UUID        | student + subject + semester (unique), status  |
 | Announcement         | `announcements`         | UUID        | targetRole, departmentId                       |
-| PlacementDrive       | `placement_drives`      | UUID        | companyName, eligibleBranches, packageLPA       |
 | OnlineClass          | `online_classes`        | UUID        | meetingLink, platform, scheduledAt             |
-| CodeProblem          | `code_problems`         | UUID        | difficulty, testCasesJson, points              |
-| CodeSubmission       | `code_submissions`      | UUID        | status, vPointsEarned                          |
-| CodeStreak           | `code_streaks`          | studentId   | currentStreak, longestStreak, lastActiveDate   |
-| CodeContest          | `code_contests`         | UUID        | startTime, endTime                             |
-| SkillCourse          | `skill_courses`         | UUID        | tags, modules → lessons                        |
 | AuditLog             | `audit_logs`            | UUID        | action, entityType, entityId, metaJson         |
-| Group                | `groups`                | UUID        | name, facultyId, courseOfferingId               |
-| GroupMember          | `group_members`         | UUID        | groupId + studentId (unique)                   |
-| GroupMessage         | `group_messages`        | UUID        | groupId, senderId, content                     |
-| GroupAssignment      | `group_assignments`     | UUID        | groupId, title, dueAt, maxPoints               |
-| GroupSubmission      | `group_submissions`     | UUID        | assignment + student (unique), similarityScore |
 
 ---
 
@@ -494,12 +465,7 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 ---
 
-### 5.10 Exam Module (`/api/exam`)
-
-**Purpose:** Examination lifecycle — sessions, answer scripts, evaluation, marks, results.
-
-| Endpoint                                     | Method | Role Restriction              | Description                        |
-|----------------------------------------------|--------|-------------------------------|------------------------------------|
+-------------------------------------------|--------|-------------------------------|------------------------------------|
 | `/exam/sessions`                             | POST   | `EXAM_CELL`, `ADMIN`          | Create exam session                |
 | `/exam/sessions`                             | GET    | Any authenticated             | List exam sessions                 |
 | `/exam/sessions/:id/generate-scripts`        | POST   | `EXAM_CELL`, `ADMIN`          | Generate barcoded answer scripts   |
@@ -516,7 +482,6 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 - Multi-stage workflow: `DRAFT` → `SUBMITTED` → `VERIFIED` → `LOCKED` → `RELEASED`
 - Answer scripts have **unique barcodes** for anonymous evaluation
 - Script distribution assigns faculty **randomly** for blind evaluation
-- Marks verification requires `EXAM_CELL` or `ADMIN` approval
 - Students can **only view their own marks** (enforced via `req.user.sub`)
 
 ---
@@ -535,12 +500,7 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 ---
 
-### 5.12 Placements Module (`/api/placements`)
-
-**Purpose:** Training & Placement Office (TPO) — drives, applications, status tracking.
-
-| Endpoint                                | Method | Role Restriction | Description                      |
-|-----------------------------------------|--------|------------------|----------------------------------|
+--------------------------------------|--------|------------------|----------------------------------|
 | `/placements/drives`                    | POST   | `ADMIN`          | Create placement drive           |
 | `/placements/drives`                    | GET    | Any authenticated| List drives (active/all)         |
 | `/placements/drives/stats`              | GET    | `ADMIN`          | Placement statistics             |
@@ -572,12 +532,7 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 ---
 
-### 5.14 Code Arena Module (`/api/code-arena`)
-
-**Purpose:** Coding playground with problems, submissions, streaks, contests, leaderboards, and notes.
-
-| Endpoint                                     | Method | Role Restriction     | Description                    |
-|----------------------------------------------|--------|----------------------|--------------------------------|
+-------------------------------------------|--------|----------------------|--------------------------------|
 | `/code-arena/problems`                        | POST   | `FACULTY`, `HOD`     | Create coding problem          |
 | `/code-arena/problems`                        | GET    | Any authenticated    | List problems (filter)         |
 | `/code-arena/problems/:id`                    | GET    | Any authenticated    | Get problem details            |
@@ -592,7 +547,6 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 | `/code-arena/notes/:id`                       | DELETE | `STUDENT`            | Delete note                    |
 | `/code-arena/contests`                        | POST   | `FACULTY`, `HOD`     | Create contest                 |
 | `/code-arena/contests`                        | GET    | Any authenticated    | List contests                  |
-| `/code-arena/contests/:id`                    | GET    | Any authenticated    | Contest details                |
 | `/code-arena/contests/:id/join`               | POST   | `STUDENT`            | Join contest                   |
 | `/code-arena/leaderboard/section/:sectionId`  | GET    | Any authenticated    | Section leaderboard            |
 | `/code-arena/leaderboard/campus`              | GET    | Any authenticated    | Campus-wide leaderboard        |
@@ -605,17 +559,11 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 - **V-Points** earned on successful submissions (first-time bonus)
 - **Streak tracking**: consecutive days with at least one accepted submission
 - **Note ownership**: students can only edit/delete their own notes
-- **Contest timing**: submissions only accepted during `startTime` → `endTime`
 - Leaderboard aggregates `vPointsEarned` across all submissions
 
 ---
 
-### 5.15 Skill Courses Module (`/api/skill-courses`)
-
-**Purpose:** In-app learning platform with courses, modules, and lessons.
-
-| Endpoint                                 | Method | Role Restriction       | Description              |
-|------------------------------------------|--------|------------------------|--------------------------|
+---------------------------------------|--------|------------------------|--------------------------|
 | `/skill-courses`                         | POST   | `ADMIN`, `FACULTY`     | Create skill course      |
 | `/skill-courses`                         | GET    | Any authenticated      | List all courses         |
 | `/skill-courses/:id`                     | GET    | Any authenticated      | Course details           |
@@ -640,7 +588,6 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 ---
 
-### 5.17 Webhooks Module
 
 **Purpose:** Outbound webhook notifications to n8n automation platform.
 
@@ -650,11 +597,9 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 ---
 
-### 5.18 Groups Module (`/api/groups`) — NEW
 
 **Purpose:** Faculty-student communication groups with in-app messaging, assignments, AI plagiarism detection, and V-Points rewards.
 
-#### Group CRUD & Members
 
 | Endpoint                                | Method | Role Restriction     | Description                       |
 |-----------------------------------------|--------|----------------------|-----------------------------------|
@@ -671,16 +616,12 @@ Regulation (1) ──── (N) Semester ──── (N) CourseOffering
 
 | Endpoint               | Method | Role Restriction | Description                        |
 |------------------------|--------|------------------|------------------------------------|
-| `/groups/:id/messages`  | POST   | Group members    | Send a message                     |
-| `/groups/:id/messages`  | GET    | Group members    | Get messages (paginated cursor)    |
 
 #### Assignments
 
 | Endpoint                                         | Method | Role Restriction     | Description                         |
 |--------------------------------------------------|--------|----------------------|-------------------------------------|
 | `/groups/:id/assignments`                         | POST   | `FACULTY`, `HOD`     | Create assignment in group          |
-| `/groups/:id/assignments`                         | GET    | Group members        | List group assignments              |
-| `/groups/assignments/:assignmentId`               | GET    | Group members        | Assignment detail with submissions  |
 | `/groups/assignments/:assignmentId/stats`         | GET    | Any authenticated    | Submission statistics               |
 
 #### Submissions & Review
@@ -742,7 +683,6 @@ web/src/
 │       ├── faculty/            # Faculty dashboard & sub-pages
 │       ├── student/            # Student dashboard & sub-pages
 │       ├── hod/                # HOD dashboard
-│       ├── exam-cell/          # Exam Cell dashboard & sub-pages
 │       └── code-arena/         # Code Arena (shared module)
 ├── components/
 │   ├── layout/
@@ -790,7 +730,6 @@ Each role gets a different sidebar navigation:
 | **ADMIN**  | `/dashboard/admin`      | Departments, Sections, Regulations, Subjects, Course Offerings, Users, Timetable, Attendance, Online Classes, Code Arena, Reports |
 | **HOD**    | `/dashboard/hod`        | Sections, Faculty, Attendance, Timetable, Code Arena         |
 | **FACULTY**| `/dashboard/faculty`    | My Classes, Attendance, Timetable, Topics Taught, Evaluation, Code Arena |
-| **STUDENT**| `/dashboard/student`    | Attendance, Timetable, Marks, Profile, Code Arena, Leaderboard |
 | **EXAM_CELL** | `/dashboard/exam-cell` | Sessions, Answer Scripts, Evaluation, Results, Subjects, Users |
 
 ### 6.4 Frontend Pages Inventory
@@ -832,14 +771,11 @@ Each role gets a different sidebar navigation:
 | Student Dashboard| `/dashboard/student`                    | Personal overview & schedule          |
 | Attendance       | `/dashboard/student/attendance`         | My attendance percentages             |
 | Timetable        | `/dashboard/student/timetable`          | Today's schedule & weekly view        |
-| Marks            | `/dashboard/student/marks`              | View released marks/grades            |
 | Profile          | `/dashboard/student/profile`            | Personal information                  |
 | QR Scan          | `/dashboard/student/scan`               | (Legacy — QR attendance removed)      |
 
-#### Exam Cell Pages
 | Page             | Path                                    | Description                           |
 |------------------|-----------------------------------------|---------------------------------------|
-| Exam Dashboard   | `/dashboard/exam-cell`                  | Overview of exam operations           |
 | Sessions         | `/dashboard/exam-cell/sessions`         | Manage exam sessions                  |
 | Answer Scripts   | `/dashboard/exam-cell/scripts`          | Barcode generation & distribution     |
 | Evaluation       | `/dashboard/exam-cell/evaluation`       | Track evaluation progress             |
@@ -851,11 +787,8 @@ Each role gets a different sidebar navigation:
 | Code Arena       | `/dashboard/code-arena`                 | Problem list, editor, streaks, notes  |
 | Leaderboard      | `/dashboard/code-arena/leaderboard`     | Section & campus leaderboards         |
 
-#### Groups Pages (Faculty & Student)
 | Page             | Path                                    | Description                           |
 |------------------|-----------------------------------------|---------------------------------------|
-| Groups (Faculty) | `/dashboard/faculty/groups`             | Create groups, chat, assign, review   |
-| Groups (Student) | `/dashboard/student/groups`             | View groups, chat, submit assignments |
 
 ### 6.5 ApiClient Architecture (`lib/api.ts`)
 

@@ -13,6 +13,11 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Increase payload size limit
+  const express = require('express');
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({

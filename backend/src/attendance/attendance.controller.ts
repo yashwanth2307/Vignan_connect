@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -57,7 +58,7 @@ export class AttendanceController {
   }
 
   @Post('sessions/:sessionId/mark')
-  @Roles(UserRole.FACULTY, UserRole.HOD)
+  @Roles(UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Mark attendance for students (manual bulk select)',
   })
@@ -74,7 +75,6 @@ export class AttendanceController {
     },
     @Req() req: any,
   ) {
-    // Backwards compatibility for old clients sending `studentIds`
     let records = body.records;
     if (!records && body.studentIds) {
       records = body.studentIds.map((id) => ({
@@ -109,5 +109,29 @@ export class AttendanceController {
   @ApiOperation({ summary: 'Get my attendance summary' })
   getMyAttendance(@Req() req: any, @Query('courseOfferingId') coId?: string) {
     return this.service.getStudentAttendance(req.user.sub, coId);
+  }
+
+  // ── Admin: Reset attendance records for a session ──
+  @Post('sessions/:sessionId/reset')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Reset attendance for a session (deletes records, reopens session)' })
+  resetSession(@Param('sessionId') sessionId: string) {
+    return this.service.resetSessionAttendance(sessionId);
+  }
+
+  // ── Admin: Delete a session entirely ──
+  @Delete('sessions/:sessionId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Delete an attendance session and all its records' })
+  deleteSession(@Param('sessionId') sessionId: string) {
+    return this.service.deleteSession(sessionId);
+  }
+
+  // ── Admin: Reset all attendance for an entire section ──
+  @Post('section/:sectionId/reset')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: Reset all attendance for a section (fresh start)' })
+  resetSectionAttendance(@Param('sectionId') sectionId: string) {
+    return this.service.resetSectionAttendance(sectionId);
   }
 }

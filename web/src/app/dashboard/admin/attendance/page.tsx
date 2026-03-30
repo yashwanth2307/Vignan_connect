@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Loader2, Filter, GraduationCap, Printer, Download } from 'lucide-react';
+import { Users, Search, Loader2, Filter, GraduationCap, Printer, Download, Pencil } from 'lucide-react';
 import api from '@/lib/api';
+import Link from 'next/link';
 
 export default function AdminAttendancePage() {
     const [departments, setDepartments] = useState<any[]>([]);
@@ -68,9 +69,14 @@ export default function AdminAttendancePage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-bold">Attendance — Student Registry</h2>
-                <p className="text-[hsl(var(--muted-foreground))]">View students by section, semester, and department</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold">Attendance — Student Registry</h2>
+                    <p className="text-[hsl(var(--muted-foreground))]">View students by section, semester, and department</p>
+                </div>
+                <Link href="/dashboard/admin/attendance/edit">
+                    <Button variant="outline"><Pencil className="w-4 h-4 mr-2" /> Override Past Attendance</Button>
+                </Link>
             </div>
 
             {/* Filters */}

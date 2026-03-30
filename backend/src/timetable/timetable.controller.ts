@@ -66,6 +66,15 @@ export class TimetableController {
     return this.service.autoGenerate(body.sectionId, body.semesterId);
   }
 
+  @Post('auto-generate-all')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Auto-generate timetables for all sections simultaneously without overlap',
+  })
+  autoGenerateAll(@Body() body: { semesterId: string }) {
+    return this.service.autoGenerateAll(body.semesterId);
+  }
+
   @Delete('section/:sectionId/clear')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Clear all timetable slots for a section' })

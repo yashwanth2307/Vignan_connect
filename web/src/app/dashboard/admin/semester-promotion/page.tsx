@@ -52,7 +52,8 @@ export default function SemesterPromotionPage() {
     };
 
     const executePromotion = async () => {
-        if (!confirm(`Are you sure you want to promote ${eligibleCount} students from Semester ${currentSem} to Semester ${parseInt(currentSem) + 1}? This action is irreversible.`)) return;
+        const targetSem = parseInt(currentSem) === 8 ? 'Alumni' : `Semester ${parseInt(currentSem) + 1}`;
+        if (!confirm(`Are you sure you want to promote ${eligibleCount} students from Semester ${currentSem} to ${targetSem}? This action is irreversible.`)) return;
         setPromoting(true);
         try {
             const res = await api.post<any>('/semester-promotion/execute', {
@@ -119,7 +120,11 @@ export default function SemesterPromotionPage() {
                             <label className="text-sm font-medium">Current Semester</label>
                             <select value={currentSem} onChange={e => { setCurrentSem(e.target.value); setPreviewLoaded(false); }}
                                 className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm">
-                                {[1,2,3,4,5,6,7].map(s => <option key={s} value={s}>Semester {s} → {s+1}</option>)}
+                                {[1,2,3,4,5,6,7,8].map(s => (
+                                    <option key={s} value={s}>
+                                        Semester {s} → {s === 8 ? 'Alumni' : s + 1}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <Button variant="gradient" onClick={loadCandidates} disabled={!selectedDept || loading}>
@@ -153,8 +158,8 @@ export default function SemesterPromotionPage() {
                                     <CardTitle className="text-lg">
                                         Promote {eligibleCount} Students: Semester {currentSem}
                                         <ChevronRight className="w-4 h-4 inline mx-1" />
-                                        Semester {parseInt(currentSem) + 1}
-                                        {toYear(parseInt(currentSem)) !== toYear(parseInt(currentSem) + 1) &&
+                                        {parseInt(currentSem) === 8 ? 'Alumni Status' : `Semester ${parseInt(currentSem) + 1}`}
+                                        {parseInt(currentSem) !== 8 && toYear(parseInt(currentSem)) !== toYear(parseInt(currentSem) + 1) &&
                                             <span className="ml-2 text-sm opacity-80">(Year {toYear(parseInt(currentSem))} → {toYear(parseInt(currentSem) + 1)})</span>
                                         }
                                     </CardTitle>
@@ -199,7 +204,7 @@ export default function SemesterPromotionPage() {
                         <div className="flex items-center gap-2 p-3 rounded-xl bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 flex-1">
                             <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
                             <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                                This will update <strong>{eligibleCount}</strong> students&apos; semester from <strong>{currentSem}</strong> to <strong>{parseInt(currentSem) + 1}</strong>.
+                                This will update <strong>{eligibleCount}</strong> students&apos; status from <strong>Semester {currentSem}</strong> to <strong>{parseInt(currentSem) === 8 ? 'Alumni' : `Semester ${parseInt(currentSem) + 1}`}</strong>.
                                 Existing attendance records will be preserved.
                             </p>
                         </div>

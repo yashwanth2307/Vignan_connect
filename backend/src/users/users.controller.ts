@@ -100,6 +100,31 @@ export class UsersController {
     return this.usersService.findAll(role);
   }
 
+  // ── Student-specific routes MUST come BEFORE generic :id routes ──
+
+  @Get('students/me')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get my student profile' })
+  getMyProfile(@Req() req: any) {
+    return this.usersService.getStudentProfile(req.user.sub);
+  }
+
+  @Patch('students/photo')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Upload passport photo (student self-service)' })
+  uploadPhoto(@Req() req: any, @Body() body: { photoUrl: string }) {
+    return this.usersService.updateStudentPhoto(req.user.sub, body.photoUrl);
+  }
+
+  @Get('students/section/:sectionId')
+  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @ApiOperation({ summary: 'Get students by section' })
+  getStudentsBySection(@Param('sectionId') sectionId: string) {
+    return this.usersService.getStudentsBySection(sectionId);
+  }
+
+  // ── Generic :id routes come AFTER specific routes ──
+
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   findOne(@Param('id') id: string) {
@@ -113,25 +138,11 @@ export class UsersController {
     return this.usersService.toggleActive(id);
   }
 
-  @Get('students/section/:sectionId')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
-  @ApiOperation({ summary: 'Get students by section' })
-  getStudentsBySection(@Param('sectionId') sectionId: string) {
-    return this.usersService.getStudentsBySection(sectionId);
-  }
-
-  @Patch('students/photo')
-  @Roles(UserRole.STUDENT)
-  @ApiOperation({ summary: 'Upload passport photo (student self-service)' })
-  uploadPhoto(@Req() req: any, @Body() body: { photoUrl: string }) {
-    return this.usersService.updateStudentPhoto(req.user.sub, body.photoUrl);
-  }
-
-  @Get('students/me')
-  @Roles(UserRole.STUDENT)
-  @ApiOperation({ summary: 'Get my student profile' })
-  getMyProfile(@Req() req: any) {
-    return this.usersService.getStudentProfile(req.user.sub);
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update basic user details' })
+  updateUser(@Param('id') id: string, @Body() dto: any) {
+    return this.usersService.updateUser(id, dto);
   }
 
   @Delete(':id')

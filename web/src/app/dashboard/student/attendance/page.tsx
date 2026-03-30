@@ -73,7 +73,7 @@ export default function StudentAttendancePage() {
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {summary.map((s: any, i: number) => (
                             <motion.div key={s.courseOfferingId} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                                <Card className="hover:shadow-soft-lg transition-all">
+                                <Card className="hover:shadow-soft-lg transition-all border-b-4" style={{borderBottomColor: s.percentage >= 75 ? '#22c55e' : s.percentage >= 60 ? '#f59e0b' : '#ef4444'}}>
                                     <CardContent className="p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-2">
@@ -94,6 +94,57 @@ export default function StudentAttendancePage() {
                             </motion.div>
                         ))}
                     </div>
+
+                    {/* Detailed Attendance Logs */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Detailed Attendance Logs (Hour by Hour)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="max-h-96 overflow-y-auto border rounded-xl">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-[hsl(var(--muted))] sticky top-0">
+                                        <tr>
+                                            <th className="p-3 font-semibold">Date</th>
+                                            <th className="p-3 font-semibold">Subject</th>
+                                            <th className="p-3 font-semibold">Hour</th>
+                                            <th className="p-3 font-semibold">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[hsl(var(--border)/0.5)]">
+                                        {attendance?.records && attendance.records.length > 0 ? (
+                                            attendance.records.map((r: any, idx: number) => {
+                                                const dateStr = new Date(r.attendanceSession.date).toLocaleDateString();
+                                                const subTitle = r.attendanceSession.courseOffering.subject.title;
+                                                return (
+                                                    <tr key={r.id || idx} className="hover:bg-[hsl(var(--secondary)/0.5)] transition-colors">
+                                                        <td className="p-3 whitespace-nowrap">{dateStr}</td>
+                                                        <td className="p-3">{subTitle}</td>
+                                                        <td className="p-3">Hour {r.attendanceSession.hourIndex + 1}</td>
+                                                        <td className="p-3">
+                                                            <Badge className={
+                                                                r.status === 'PRESENT' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
+                                                                r.status === 'ABSENT' ? 'bg-red-100 text-red-700 hover:bg-red-100' :
+                                                                'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                                                            }>
+                                                                {r.status}
+                                                            </Badge>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-[hsl(var(--muted-foreground))]">
+                                                    No detailed logs available.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </>
             )}
         </div>

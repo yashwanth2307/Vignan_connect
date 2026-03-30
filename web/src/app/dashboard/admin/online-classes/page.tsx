@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Video, Plus, Loader2, X, Clock, Calendar, Monitor, PhoneOff } from 'lucide-react';
+import { Video, Plus, Loader2, X, Clock, Calendar, Monitor, PhoneOff, Trash2, Pencil } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
+import { VConnectClassroom } from '@/components/online-classes/vconnect-classroom';
 
 const PLATFORMS = ['In-App', 'Google Meet', 'Zoom', 'Microsoft Teams', 'Other'];
 
@@ -42,6 +43,7 @@ export default function OnlineClassesPage() {
     const [error, setError] = useState('');
     const [activeRoom, setActiveRoom] = useState<string | null>(null);
     const [activeClassTitle, setActiveClassTitle] = useState('');
+    const [editingClassId, setEditingClassId] = useState<string | null>(null);
 
     // Form state
     const [title, setTitle] = useState('');
@@ -68,21 +70,57 @@ export default function OnlineClassesPage() {
         setSaving(true);
         setError('');
         try {
-            await api.post('/online-classes', {
+            const payload = {
                 title,
                 description: description || undefined,
                 meetingLink: platform === 'In-App' ? undefined : meetingLink,
                 platform,
                 scheduledAt: new Date(scheduledAt).toISOString(),
                 durationMinutes: parseInt(durationMinutes) || 60,
-            });
+            };
+
+            if (editingClassId) {
+                await api.put(`/online-classes/${editingClassId}`, payload);
+            } else {
+                await api.post('/online-classes', payload);
+            }
+            
             setShowForm(false);
+            setEditingClassId(null);
             setTitle(''); setDescription(''); setMeetingLink('');
             setPlatform('In-App');
             setScheduledAt(''); setDurationMinutes('60');
             await load();
         } catch (err: any) { setError(err.message); }
         setSaving(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this class?')) return;
+        try {
+            await api.delete(`/online-classes/${id}`);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    };
+
+    const handleEdit = (cls: any) => {
+        setTitle(cls.title || '');
+        setDescription(cls.description || '');
+        setPlatform(cls.platform);
+        setMeetingLink(cls.meetingLink || '');
+        
+        // Format date for datetime-local input
+        const d = new Date(cls.scheduledAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        setScheduledAt(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+        
+        setDurationMinutes(cls.durationMinutes?.toString() || '60');
+        setEditingClassId(cls.id);
+        setShowForm(true);
     };
 
     const updateStatus = async (id: string, status: string) => {
@@ -103,29 +141,21 @@ export default function OnlineClassesPage() {
         setActiveClassTitle('');
     };
 
-    // In-app video room view
+    // In-app video room view — Custom V-Connect Classroom
     if (activeRoom) {
-        const jitsiDomain = 'meet.jit.si';
-        const jitsiUrl = `https://${jitsiDomain}/${activeRoom}#config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false`;
-
         return (
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold">{activeClassTitle}</h2>
-                        <p className="text-[hsl(var(--muted-foreground))]">Live In-App Class</p>
+                        <p className="text-[hsl(var(--muted-foreground))]">Live Virtual Classroom • Room: {activeRoom}</p>
                     </div>
                     <Button onClick={leaveRoom} variant="destructive" size="lg">
                         <PhoneOff className="w-4 h-4 mr-2" /> Leave Class
                     </Button>
                 </div>
-                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl overflow-hidden shadow-lg border border-[hsl(var(--border))]">
-                    <iframe
-                        src={jitsiUrl}
-                        style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: '500px', border: 0 }}
-                        allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
-                        allowFullScreen
-                    />
+                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+                    <VConnectClassroom roomName={activeRoom} userName={user?.name || 'Guest'} isHost={canCreate} />
                 </motion.div>
             </div>
         );
@@ -149,8 +179,8 @@ export default function OnlineClassesPage() {
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle>Schedule Online Class</CardTitle>
-                            <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>
+                            <CardTitle>{editingClassId ? 'Edit Online Class' : 'Schedule Online Class'}</CardTitle>
+                            <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); setEditingClassId(null); }}>
                                 <X className="w-4 h-4" />
                             </Button>
                         </CardHeader>
@@ -199,7 +229,7 @@ export default function OnlineClassesPage() {
                                 </div>
                                 <div className="flex items-end">
                                     <Button type="submit" disabled={saving} className="w-full">
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Schedule'}
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingClassId ? 'Save Changes' : 'Schedule'}
                                     </Button>
                                 </div>
                             </form>
@@ -245,6 +275,16 @@ export default function OnlineClassesPage() {
                                                 {cls.status}
                                             </Badge>
                                         </div>
+                                        {canCreate && (
+                                            <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/50 dark:bg-black/50 backdrop-blur border rounded-lg p-1">
+                                                <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-black/5 dark:hover:bg-white/10" onClick={() => handleEdit(cls)}>
+                                                    <Pencil className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-black/5 dark:hover:bg-white/10" onClick={() => handleDelete(cls.id)}>
+                                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                                </Button>
+                                            </div>
+                                        )}
 
                                         {cls.description && (
                                             <p className="text-xs text-[hsl(var(--muted-foreground))] mb-3 line-clamp-2">{cls.description}</p>

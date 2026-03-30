@@ -109,6 +109,25 @@ export default function TimetablePage() {
         setGenerating(false);
     };
 
+    const handleAutoGenerateAll = async () => {
+        if (!selectedSemester) {
+            setError('Please select a semester first.');
+            return;
+        }
+        if (!confirm('This will REGENERATE TIMETABLES for ALL SECTIONS in this semester. Are you sure you want to proceed?')) return;
+        setGenerating(true);
+        setGenResult(null);
+        setError('');
+        try {
+            const result = await api.post<any>('/timetable/auto-generate-all', {
+                semesterId: selectedSemester,
+            });
+            setGenResult(result);
+            await loadSlots(selectedSection);
+        } catch (err: any) { setError(err.message || 'Auto-generate all failed'); }
+        setGenerating(false);
+    };
+
     const handleClearSection = async () => {
         try {
             await api.delete(`/timetable/section/${selectedSection}/clear`);
@@ -184,8 +203,12 @@ export default function TimetablePage() {
                             {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number}</option>)}
                         </select>
                     </div>
-                    <Button onClick={handleAutoGenerate} variant="gradient" disabled={generating || !selectedSemester}>
-                        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1" /> Auto-Generate</>}
+                    <Button onClick={handleAutoGenerate} variant="gradient" disabled={generating || !selectedSemester || !selectedSection}>
+                        {generating && (!selectedSection) ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1" /> Gen Section</>}
+                    </Button>
+                    <Button onClick={handleAutoGenerateAll} variant="default" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md hover:shadow-lg transition-all" disabled={generating || !selectedSemester}>
+                        {generating && (!selectedSection) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                        Generate All
                     </Button>
                     <Button onClick={() => setShowForm(true)} variant="outline" size="sm"><Plus className="w-4 h-4 mr-1" /> Manual</Button>
                     {slots.length > 0 && (

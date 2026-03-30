@@ -22,9 +22,9 @@ const departments = [
 ];
 
 const leadership = [
-  { name: 'Dr. Lavu Rathaiah', role: 'Founder & Chairman', desc: 'Visionary founder of the Vignan Group of Institutions, established in 1999. Leading the group towards excellence in education and innovation.', gradient: 'from-amber-500 to-orange-600' },
-  { name: 'Mr. B. Shravan', role: 'CEO, Vignan Group', desc: 'Driving the strategic growth and modernization of Vignan institutions with a focus on technology and student outcomes.', gradient: 'from-blue-500 to-indigo-600' },
-  { name: 'Dr. G. Durga Sukumar', role: 'Principal, VGNT', desc: 'Leading academic and administrative excellence at VGNT Deshmukhi. Committed to advancing quality education and research.', gradient: 'from-green-500 to-emerald-600' },
+  { name: 'Dr. Lavu Rathaiah', role: 'Founder & Chairman', image: '/images/chairman.jpg', desc: 'Visionary founder of the Vignan Group of Institutions, established in 1999. Leading the group towards excellence in education and innovation.', gradient: 'from-amber-500 to-orange-600' },
+  { name: 'Mr. Shravan Boyapati', role: 'CEO, Vignan Group', image: '/images/shravan.jpg', desc: 'Driving the strategic growth and modernization of Vignan institutions with a focus on technology and student outcomes.', gradient: 'from-blue-500 to-indigo-600' },
+  { name: 'Dr. G. Durga Sukumar', role: 'Principal, VGNT', image: '/images/principal.jpg', desc: 'Leading academic and administrative excellence at VGNT Deshmukhi. Committed to advancing quality education and research.', gradient: 'from-green-500 to-emerald-600' },
 ];
 
 export default function LandingPage() {
@@ -209,9 +209,15 @@ export default function LandingPage() {
               <motion.div key={leader.name} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
                 <Card className="h-full hover:shadow-soft-lg transition-all text-center group">
                   <CardContent className="p-8">
-                    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${leader.gradient} flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform shadow-lg`}>
-                      <Star className="w-8 h-8 text-white" />
-                    </div>
+                    {leader.image ? (
+                      <div className="w-24 h-24 rounded-full mx-auto mb-5 overflow-hidden border-4 border-white shadow-xl group-hover:scale-110 transition-transform relative ring-2 ring-primary/20 bg-gray-100">
+                        <Image src={leader.image} alt={leader.name} fill className="object-cover" />
+                      </div>
+                    ) : (
+                      <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${leader.gradient} flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform shadow-lg`}>
+                        <Star className="w-8 h-8 text-white" />
+                      </div>
+                    )}
                     <h3 className="text-xl font-bold mb-1">{leader.name}</h3>
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-3">{leader.role}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">{leader.desc}</p>

@@ -54,7 +54,7 @@ export class SubjectsController {
 
   @Put(':id')
   @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: Partial<CreateSubjectDto>) {
+  update(@Param('id') id: string, @Body() dto: any) {
     return this.service.update(id, dto);
   }
 
