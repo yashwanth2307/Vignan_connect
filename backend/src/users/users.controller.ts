@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -13,72 +24,122 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
-    constructor(private usersService: UsersService) { }
+  constructor(private usersService: UsersService) {}
 
-    @Post('students')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Register a new student (password defaults to student@{rollNo})' })
-    createStudent(@Body() dto: CreateStudentDto) {
-        return this.usersService.createStudent(dto);
-    }
+  @Post('students')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Register a new student (password defaults to student@{rollNo})',
+  })
+  createStudent(@Body() dto: CreateStudentDto) {
+    return this.usersService.createStudent(dto);
+  }
 
-    @Post('students/bulk')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Bulk upload students from parsed Excel data' })
-    bulkCreateStudents(@Body() body: {
-        students: Array<{
-            name: string;
-            email: string;
-            phone?: string;
-            rollNo: string;
-            sectionId: string;
-            departmentId: string;
-            regulationId: string;
-            batchStartYear: number;
-            batchEndYear: number;
-        }>
-    }) {
-        return this.usersService.bulkCreateStudents(body.students);
-    }
+  @Post('students/bulk')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Bulk upload students from parsed Excel data' })
+  bulkCreateStudents(
+    @Body()
+    body: {
+      students: Array<{
+        name: string;
+        email: string;
+        phone?: string;
+        rollNo: string;
+        sectionId: string;
+        departmentId: string;
+        regulationId: string;
+        batchStartYear: number;
+        batchEndYear: number;
+      }>;
+    },
+  ) {
+    return this.usersService.bulkCreateStudents(body.students);
+  }
 
-    @Post('faculty')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Register a new faculty member (password defaults to faculty@{empId})' })
-    createFaculty(@Body() dto: CreateFacultyDto) {
-        return this.usersService.createFaculty(dto);
-    }
+  @Post('faculty')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary:
+      'Register a new faculty member (password defaults to faculty@{empId})',
+  })
+  createFaculty(@Body() dto: CreateFacultyDto) {
+    return this.usersService.createFaculty(dto);
+  }
 
-    @Post('staff')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Register Exam Cell or TPO staff (password defaults to staff@{emailPrefix})' })
-    createStaff(@Body() dto: { name: string; email: string; phone?: string; role: 'EXAM_CELL' | 'TPO'; password?: string }) {
-        return this.usersService.createStaff(dto);
-    }
+  @Post('faculty/bulk')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Bulk upload faculty from parsed Excel data' })
+  bulkCreateFaculty(@Body() body: { faculties: any[] }) {
+    return this.usersService.bulkCreateFaculty(body.faculties);
+  }
 
-    @Get()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'List all users, optionally filter by role' })
-    findAll(@Query('role') role?: UserRole) {
-        return this.usersService.findAll(role);
-    }
+  @Post('staff')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary:
+      'Register Exam Cell or TPO staff (password defaults to staff@{emailPrefix})',
+  })
+  createStaff(
+    @Body()
+    dto: {
+      name: string;
+      email: string;
+      phone?: string;
+      role: 'EXAM_CELL' | 'TPO';
+      password?: string;
+    },
+  ) {
+    return this.usersService.createStaff(dto);
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Get user by ID' })
-    findOne(@Param('id') id: string) {
-        return this.usersService.findOne(id);
-    }
+  @Get()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'List all users, optionally filter by role' })
+  findAll(@Query('role') role?: UserRole) {
+    return this.usersService.findAll(role);
+  }
 
-    @Patch(':id/toggle-active')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Toggle user active status' })
-    toggleActive(@Param('id') id: string) {
-        return this.usersService.toggleActive(id);
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user by ID' })
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
 
-    @Get('students/section/:sectionId')
-    @Roles(UserRole.ADMIN, UserRole.FACULTY)
-    @ApiOperation({ summary: 'Get students by section' })
-    getStudentsBySection(@Param('sectionId') sectionId: string) {
-        return this.usersService.getStudentsBySection(sectionId);
-    }
+  @Patch(':id/toggle-active')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Toggle user active status' })
+  toggleActive(@Param('id') id: string) {
+    return this.usersService.toggleActive(id);
+  }
+
+  @Get('students/section/:sectionId')
+  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @ApiOperation({ summary: 'Get students by section' })
+  getStudentsBySection(@Param('sectionId') sectionId: string) {
+    return this.usersService.getStudentsBySection(sectionId);
+  }
+
+  @Patch('students/photo')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Upload passport photo (student self-service)' })
+  uploadPhoto(@Req() req: any, @Body() body: { photoUrl: string }) {
+    return this.usersService.updateStudentPhoto(req.user.sub, body.photoUrl);
+  }
+
+  @Get('students/me')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get my student profile' })
+  getMyProfile(@Req() req: any) {
+    return this.usersService.getStudentProfile(req.user.sub);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Delete user completely (cascade deletes all related records)',
+  })
+  deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
+  }
 }

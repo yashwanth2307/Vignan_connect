@@ -3,8 +3,8 @@ import { TimetableService } from './timetable.service';
 import { TimetableController } from './timetable.controller';
 
 @Module({
-    controllers: [TimetableController],
-    providers: [TimetableService],
-    exports: [TimetableService],
+  controllers: [TimetableController],
+  providers: [TimetableService],
+  exports: [TimetableService],
 })
-export class TimetableModule { }
+export class TimetableModule {}

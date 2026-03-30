@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Code2, Flame, Trophy, BookOpen, Plus, Loader2, X, Send, StickyNote, Swords, ChevronRight, Monitor } from 'lucide-react';
+import { Code2, Flame, Trophy, BookOpen, Plus, Loader2, X, Send, StickyNote, Swords, ChevronRight, Monitor, ChevronLeft, CheckCircle2, Clock, Tag, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 
 const VSCodeIDE = lazy(() => import('@/components/code-arena/vscode-ide'));
 
-type Tab = 'problems' | 'ide' | 'notes' | 'contests' | 'leaderboard';
+type Tab = 'problems' | 'solve' | 'notes' | 'contests' | 'leaderboard';
 
 export default function CodeArenaPage() {
     const { user } = useAuth();
@@ -22,8 +22,6 @@ export default function CodeArenaPage() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedProblem, setSelectedProblem] = useState<any>(null);
-    const [code, setCode] = useState('');
-    const [language, setLanguage] = useState('javascript');
     const [submitting, setSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState<any>(null);
     const [notes, setNotes] = useState<any[]>([]);
@@ -37,6 +35,7 @@ export default function CodeArenaPage() {
     const [newContest, setNewContest] = useState({ title: '', description: '', startTime: '', endTime: '', problemIds: [] as string[] });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [descExpanded, setDescExpanded] = useState(true);
 
     const isFaculty = user?.role === 'FACULTY' || user?.role === 'HOD' || user?.role === 'ADMIN';
     const isStudent = user?.role === 'STUDENT';
@@ -49,7 +48,7 @@ export default function CodeArenaPage() {
         setLoading(true);
         setError('');
         try {
-            if (tab === 'problems' || tab === 'ide') {
+            if (tab === 'problems' || tab === 'solve') {
                 const p = await api.get<any[]>('/code-arena/problems');
                 setProblems(p);
                 if (isStudent) {
@@ -138,11 +137,191 @@ export default function CodeArenaPage() {
 
     const tabs = [
         { id: 'problems' as Tab, label: 'Problems', icon: Code2 },
-        { id: 'ide' as Tab, label: 'Code IDE', icon: Monitor },
+        { id: 'solve' as Tab, label: 'Solve', icon: Monitor },
         ...(isStudent ? [{ id: 'notes' as Tab, label: 'Notes', icon: StickyNote }] : []),
         { id: 'contests' as Tab, label: 'Contests', icon: Swords },
         { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy },
     ];
+
+    // ─── HackerRank-Style Split View ────────────────────────────
+    const renderSolveView = () => {
+        if (!selectedProblem) {
+            return (
+                <div className="text-center py-20">
+                    <Monitor className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                    <h3 className="text-lg font-semibold mb-2">Select a Problem</h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                        Choose a problem from the Problems tab to start coding
+                    </p>
+                    <Button variant="outline" onClick={() => setTab('problems')}>
+                        <Code2 className="w-4 h-4 mr-2" /> Browse Problems
+                    </Button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex gap-0" style={{ height: 'calc(100vh - 180px)', minHeight: '600px' }}>
+                {/* ═══ LEFT PANEL — Problem Description ═══ */}
+                <div
+                    className="flex flex-col border-r border-[hsl(var(--border))] overflow-hidden"
+                    style={{ width: descExpanded ? '420px' : '48px', minWidth: descExpanded ? '320px' : '48px', transition: 'width 0.3s ease, min-width 0.3s ease' }}
+                >
+                    {/* Panel toggle header */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-[hsl(var(--muted)/0.3)] border-b border-[hsl(var(--border))] shrink-0">
+                        {descExpanded ? (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-blue-500" />
+                                    <span className="text-xs font-semibold tracking-wide text-[hsl(var(--muted-foreground))]">DESCRIPTION</span>
+                                </div>
+                                <button onClick={() => setDescExpanded(false)} className="p-1 rounded hover:bg-[hsl(var(--accent))]">
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <button onClick={() => setDescExpanded(true)} className="p-1 rounded hover:bg-[hsl(var(--accent))] mx-auto">
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    {descExpanded && (
+                        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                            {/* Title + difficulty + points */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <button
+                                        onClick={() => { setSelectedProblem(null); setSubmitResult(null); setTab('problems'); }}
+                                        className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                                    >
+                                        ← Back
+                                    </button>
+                                </div>
+                                <h2 className="text-xl font-bold mb-2">{selectedProblem.title}</h2>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${difficultyColor(selectedProblem.difficulty)}`}>
+                                        {selectedProblem.difficulty}
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 font-medium">
+                                        {selectedProblem.points} pts
+                                    </span>
+                                    {selectedProblem.tags && selectedProblem.tags.split(',').filter(Boolean).map((t: string) => (
+                                        <Badge key={t.trim()} variant="outline" className="text-[10px]">
+                                            <Tag className="w-2.5 h-2.5 mr-0.5" />{t.trim()}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <div className="text-sm whitespace-pre-wrap leading-relaxed text-[hsl(var(--foreground)/0.85)]">
+                                    {selectedProblem.description}
+                                </div>
+                            </div>
+
+                            {/* Input Format */}
+                            {selectedProblem.inputFormat && (
+                                <div>
+                                    <h4 className="text-xs font-bold tracking-wider text-[hsl(var(--muted-foreground))] mb-1.5 uppercase">Input Format</h4>
+                                    <div className="text-sm bg-[hsl(var(--muted)/0.3)] rounded-lg p-3 font-mono text-[hsl(var(--foreground)/0.8)]">
+                                        {selectedProblem.inputFormat}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Output Format */}
+                            {selectedProblem.outputFormat && (
+                                <div>
+                                    <h4 className="text-xs font-bold tracking-wider text-[hsl(var(--muted-foreground))] mb-1.5 uppercase">Output Format</h4>
+                                    <div className="text-sm bg-[hsl(var(--muted)/0.3)] rounded-lg p-3 font-mono text-[hsl(var(--foreground)/0.8)]">
+                                        {selectedProblem.outputFormat}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Constraints */}
+                            {selectedProblem.constraints && (
+                                <div>
+                                    <h4 className="text-xs font-bold tracking-wider text-[hsl(var(--muted-foreground))] mb-1.5 uppercase">Constraints</h4>
+                                    <div className="text-sm bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-800/30 rounded-lg p-3 font-mono text-orange-700 dark:text-orange-400">
+                                        {selectedProblem.constraints}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sample I/O */}
+                            {(selectedProblem.sampleInput || selectedProblem.sampleOutput) && (
+                                <div>
+                                    <h4 className="text-xs font-bold tracking-wider text-[hsl(var(--muted-foreground))] mb-2 uppercase">Sample Test Case</h4>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {selectedProblem.sampleInput && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] mb-1">INPUT</p>
+                                                <pre className="text-xs bg-[#0d1117] text-[#e6edf3] rounded-lg p-3 font-mono overflow-x-auto">
+                                                    {selectedProblem.sampleInput}
+                                                </pre>
+                                            </div>
+                                        )}
+                                        {selectedProblem.sampleOutput && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] mb-1">OUTPUT</p>
+                                                <pre className="text-xs bg-[#0d1117] text-[#3fb950] rounded-lg p-3 font-mono overflow-x-auto">
+                                                    {selectedProblem.sampleOutput}
+                                                </pre>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Submission Result (shown below description) */}
+                            {submitResult && (
+                                <div className={`rounded-xl border-2 p-4 ${submitResult.status === 'ACCEPTED' ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20' : 'border-red-500 bg-red-50/50 dark:bg-red-950/20'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {submitResult.status === 'ACCEPTED'
+                                            ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                            : <X className="w-5 h-5 text-red-500" />}
+                                        <span className="font-bold text-sm">
+                                            {submitResult.status === 'ACCEPTED' ? '✅ Accepted!' : `❌ ${submitResult.status}`}
+                                        </span>
+                                    </div>
+                                    {submitResult.totalTests > 0 && (
+                                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                                            Tests: {submitResult.testsPassed}/{submitResult.totalTests} passed
+                                        </p>
+                                    )}
+                                    {submitResult.vPointsEarned > 0 && (
+                                        <p className="text-xs font-bold text-violet-600 dark:text-violet-400 mt-1">
+                                            <Flame className="w-3 h-3 inline mr-1" />+{submitResult.vPointsEarned} V-Points earned!
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ═══ RIGHT PANEL — Code Editor (IDE) ═══ */}
+                <div className="flex-1 overflow-hidden">
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center h-full bg-[#0d1117] rounded-br-xl">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+                        </div>
+                    }>
+                        <VSCodeIDE
+                            problem={selectedProblem}
+                            onSubmitCode={handleSubmitCode}
+                            submitResult={submitResult}
+                            isStudent={isStudent}
+                            submitting={submitting}
+                        />
+                    </Suspense>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -200,7 +379,7 @@ export default function CodeArenaPage() {
                 {tabs.map(t => (
                     <button
                         key={t.id}
-                        onClick={() => { setTab(t.id); if (t.id !== 'ide') { setSelectedProblem(null); setSubmitResult(null); } }}
+                        onClick={() => { setTab(t.id); if (t.id !== 'solve') { setSubmitResult(null); } }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${tab === t.id
                             ? 'bg-[hsl(var(--background))] shadow-sm text-[hsl(var(--foreground))]'
                             : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
@@ -269,6 +448,10 @@ export default function CodeArenaPage() {
                                             <Label>Sample Output</Label>
                                             <textarea value={newProblem.sampleOutput} onChange={e => setNewProblem({ ...newProblem, sampleOutput: e.target.value })} rows={2} className="flex w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm font-mono" />
                                         </div>
+                                        <div className="space-y-1">
+                                            <Label>Constraints</Label>
+                                            <textarea value={newProblem.constraints} onChange={e => setNewProblem({ ...newProblem, constraints: e.target.value })} rows={2} className="flex w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm font-mono" placeholder="1 ≤ N ≤ 10^5" />
+                                        </div>
                                         <div className="flex items-end sm:col-span-2">
                                             <Button type="submit" disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Problem'}</Button>
                                         </div>
@@ -281,24 +464,27 @@ export default function CodeArenaPage() {
                     <div className="space-y-3">
                         {problems.map((p, i) => (
                             <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                                <Card className="hover:shadow-soft transition-all cursor-pointer" onClick={() => { setSelectedProblem(p); setTab('ide'); setSubmitResult(null); }}>
+                                <Card className="hover:shadow-soft transition-all cursor-pointer group" onClick={() => { setSelectedProblem(p); setTab('solve'); setSubmitResult(null); }}>
                                     <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
                                                 <Code2 className="w-5 h-5 text-white" />
                                             </div>
                                             <div>
-                                                <p className="font-semibold">{p.title}</p>
+                                                <p className="font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{p.title}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColor(p.difficulty)}`}>{p.difficulty}</span>
                                                     <span className="text-xs text-[hsl(var(--muted-foreground))]">{p.points} pts</span>
-                                                    {p.tags && p.tags.split(',').filter(Boolean).map((t: string) => (
+                                                    {p.tags && p.tags.split(',').filter(Boolean).slice(0, 3).map((t: string) => (
                                                         <Badge key={t.trim()} variant="outline" className="text-[10px]">{t.trim()}</Badge>
                                                     ))}
                                                 </div>
                                             </div>
                                         </div>
-                                        <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Solve →</span>
+                                            <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-blue-500 transition-colors" />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -308,73 +494,8 @@ export default function CodeArenaPage() {
                 </div>
             )}
 
-            {/* ═══ IDE TAB — VS Code Style ═══ */}
-            {!loading && tab === 'ide' && (
-                <div>
-                    {!selectedProblem ? (
-                        <div>
-                            {/* Free mode IDE — no problem selected */}
-                            <div className="mb-4 flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-lg font-bold flex items-center gap-2">
-                                        <Monitor className="w-5 h-5 text-violet-500" />
-                                        Free Practice Mode
-                                    </h3>
-                                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                                        Write and run code in 8+ languages — or pick a problem from the Problems tab
-                                    </p>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => setTab('problems')}>
-                                    <Code2 className="w-4 h-4" /> Browse Problems
-                                </Button>
-                            </div>
-                            <Suspense fallback={
-                                <div className="flex items-center justify-center h-96 bg-[#1e1e2e] rounded-xl">
-                                    <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-                                </div>
-                            }>
-                                <VSCodeIDE isStudent={isStudent} />
-                            </Suspense>
-                        </div>
-                    ) : (
-                        <div>
-                            {/* Problem solving mode */}
-                            <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => { setSelectedProblem(null); setSubmitResult(null); }}
-                                        className="text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
-                                    >
-                                        ← Back
-                                    </button>
-                                    <div>
-                                        <h3 className="text-lg font-bold flex items-center gap-2">
-                                            {selectedProblem.title}
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColor(selectedProblem.difficulty)}`}>
-                                                {selectedProblem.difficulty}
-                                            </span>
-                                        </h3>
-                                        <p className="text-xs text-[hsl(var(--muted-foreground))]">{selectedProblem.points} points</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <Suspense fallback={
-                                <div className="flex items-center justify-center h-96 bg-[#1e1e2e] rounded-xl">
-                                    <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-                                </div>
-                            }>
-                                <VSCodeIDE
-                                    problem={selectedProblem}
-                                    onSubmitCode={handleSubmitCode}
-                                    submitResult={submitResult}
-                                    isStudent={isStudent}
-                                    submitting={submitting}
-                                />
-                            </Suspense>
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* ═══ SOLVE TAB — HackerRank Split View ═══ */}
+            {!loading && tab === 'solve' && renderSolveView()}
 
             {/* ═══ NOTES TAB ═══ */}
             {!loading && tab === 'notes' && isStudent && (

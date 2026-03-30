@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Loader2, X, UserCheck, UserX, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Users, Plus, Loader2, X, UserCheck, UserX, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ShieldCheck, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import * as XLSX from 'xlsx';
 
@@ -80,7 +80,18 @@ export default function UsersPage() {
         setSaving(true);
         setError('');
         try {
-            await api.post('/users/students', { ...form, batchStartYear: +form.batchStartYear, batchEndYear: +form.batchEndYear });
+            const payload: any = {
+                ...form,
+                batchStartYear: +form.batchStartYear,
+                batchEndYear: +form.batchEndYear,
+            };
+            if (form.currentYear) payload.currentYear = +form.currentYear;
+            if (form.currentSemester) payload.currentSemester = +form.currentSemester;
+            // Remove empty optional strings
+            Object.keys(payload).forEach(k => {
+                if (payload[k] === '' || payload[k] === undefined) delete payload[k];
+            });
+            await api.post('/users/students', payload);
             setShowStudentForm(false);
             setForm({});
             await load();
@@ -117,6 +128,14 @@ export default function UsersPage() {
     const toggleActive = async (id: string) => {
         try {
             await api.patch(`/users/${id}/toggle-active`);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    };
+
+    const deleteUser = async (id: string, name: string) => {
+        if (!confirm(`⚠️ Are you sure you want to PERMANENTLY DELETE "${name}"?\n\nThis will remove ALL their data (attendance, marks, submissions, etc.) and cannot be undone.`)) return;
+        try {
+            await api.delete(`/users/${id}`);
             await load();
         } catch (err: any) { alert(err.message); }
     };
@@ -575,46 +594,146 @@ export default function UsersPage() {
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle>Register Student</CardTitle>
+                            <CardTitle>Register Student — Complete Details</CardTitle>
                             <Button variant="ghost" size="icon" onClick={() => setShowStudentForm(false)}><X className="w-4 h-4" /></Button>
                         </CardHeader>
                         <CardContent>
                             {error && <div className="text-red-500 text-sm mb-3 bg-red-50 dark:bg-red-950/30 p-3 rounded-xl">{error}</div>}
-                            <form onSubmit={createStudent} className="grid sm:grid-cols-3 gap-4">
-                                <div className="space-y-1"><Label>Name</Label><Input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-                                <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
-                                <div className="space-y-1"><Label>Phone</Label><Input value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-                                <div className="space-y-1"><Label>Roll No</Label><Input value={form.rollNo || ''} onChange={e => setForm({ ...form, rollNo: e.target.value })} required /></div>
-                                <div className="space-y-1">
-                                    <Label>Password</Label>
-                                    <Input value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={`student@${form.rollNo || 'rollNo'}`} />
-                                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Leave blank for default: student@{'{rollNo}'}</p>
+                            <form onSubmit={createStudent} className="space-y-6">
+
+                                {/* Section 1: Basic Info */}
+                                <div>
+                                    <h4 className="font-semibold text-sm text-[hsl(var(--primary))] mb-3 border-b pb-1">📋 Basic Information</h4>
+                                    <div className="grid sm:grid-cols-3 gap-4">
+                                        <div className="space-y-1"><Label>Full Name *</Label><Input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Ravi Kumar" /></div>
+                                        <div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} required placeholder="ravi@vignan.edu" /></div>
+                                        <div className="space-y-1"><Label>Roll No *</Label><Input value={form.rollNo || ''} onChange={e => setForm({ ...form, rollNo: e.target.value })} required placeholder="22CSE001" /></div>
+                                        <div className="space-y-1"><Label>Phone</Label><Input value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="9876543210" /></div>
+                                        <div className="space-y-1"><Label>Student Phone</Label><Input value={form.studentPhone || ''} onChange={e => setForm({ ...form, studentPhone: e.target.value })} placeholder="9876543210" /></div>
+                                        <div className="space-y-1">
+                                            <Label>Password</Label>
+                                            <Input value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={`student@${form.rollNo || 'rollNo'}`} />
+                                            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Leave blank for default: student@{'{rollNo}'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label>Department</Label>
-                                    <select value={form.departmentId || ''} onChange={e => setForm({ ...form, departmentId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
-                                        <option value="">Select</option>
-                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                    </select>
+
+                                {/* Section 2: Personal Details */}
+                                <div>
+                                    <h4 className="font-semibold text-sm text-[hsl(var(--primary))] mb-3 border-b pb-1">👤 Personal Details</h4>
+                                    <div className="grid sm:grid-cols-4 gap-4">
+                                        <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={form.dob || ''} onChange={e => setForm({ ...form, dob: e.target.value })} /></div>
+                                        <div className="space-y-1">
+                                            <Label>Gender</Label>
+                                            <select value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Blood Group</Label>
+                                            <select value={form.bloodGroup || ''} onChange={e => setForm({ ...form, bloodGroup: e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1"><Label>Aadhar Number</Label><Input value={form.aadharNumber || ''} onChange={e => setForm({ ...form, aadharNumber: e.target.value })} placeholder="123456789012" maxLength={12} /></div>
+                                        <div className="space-y-1">
+                                            <Label>Category</Label>
+                                            <select value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                {['OC', 'BC-A', 'BC-B', 'BC-C', 'BC-D', 'BC-E', 'SC', 'ST', 'EWS'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1"><Label>Religion</Label><Input value={form.religion || ''} onChange={e => setForm({ ...form, religion: e.target.value })} placeholder="Hindu" /></div>
+                                        <div className="space-y-1"><Label>Nationality</Label><Input value={form.nationality || 'Indian'} onChange={e => setForm({ ...form, nationality: e.target.value })} /></div>
+                                        <div className="space-y-1">
+                                            <Label>Admission Type</Label>
+                                            <select value={form.admissionType || 'REGULAR'} onChange={e => setForm({ ...form, admissionType: e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="REGULAR">Regular</option>
+                                                <option value="LATERAL">Lateral Entry</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label>Section</Label>
-                                    <select value={form.sectionId || ''} onChange={e => setForm({ ...form, sectionId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
-                                        <option value="">Select</option>
-                                        {sections.filter(s => !form.departmentId || s.departmentId === form.departmentId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
+
+                                {/* Section 3: Family Details */}
+                                <div>
+                                    <h4 className="font-semibold text-sm text-[hsl(var(--primary))] mb-3 border-b pb-1">👨‍👩‍👦 Family Details</h4>
+                                    <div className="grid sm:grid-cols-4 gap-4">
+                                        <div className="space-y-1"><Label>Father Name</Label><Input value={form.fatherName || ''} onChange={e => setForm({ ...form, fatherName: e.target.value })} placeholder="Suresh Kumar" /></div>
+                                        <div className="space-y-1"><Label>Father Phone</Label><Input value={form.fatherPhone || ''} onChange={e => setForm({ ...form, fatherPhone: e.target.value })} placeholder="9876543211" /></div>
+                                        <div className="space-y-1"><Label>Father Occupation</Label><Input value={form.fatherOccupation || ''} onChange={e => setForm({ ...form, fatherOccupation: e.target.value })} placeholder="Business" /></div>
+                                        <div className="space-y-1"><Label>Father Email</Label><Input value={form.fatherEmail || ''} onChange={e => setForm({ ...form, fatherEmail: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Mother Name</Label><Input value={form.motherName || ''} onChange={e => setForm({ ...form, motherName: e.target.value })} placeholder="Sunitha" /></div>
+                                        <div className="space-y-1"><Label>Mother Phone</Label><Input value={form.motherPhone || ''} onChange={e => setForm({ ...form, motherPhone: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Mother Occupation</Label><Input value={form.motherOccupation || ''} onChange={e => setForm({ ...form, motherOccupation: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Mother Email</Label><Input value={form.motherEmail || ''} onChange={e => setForm({ ...form, motherEmail: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Guardian Name</Label><Input value={form.guardianName || ''} onChange={e => setForm({ ...form, guardianName: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Guardian Phone</Label><Input value={form.guardianPhone || ''} onChange={e => setForm({ ...form, guardianPhone: e.target.value })} /></div>
+                                        <div className="space-y-1"><Label>Guardian Relation</Label><Input value={form.guardianRelation || ''} onChange={e => setForm({ ...form, guardianRelation: e.target.value })} placeholder="Uncle" /></div>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label>Regulation</Label>
-                                    <select value={form.regulationId || ''} onChange={e => setForm({ ...form, regulationId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
-                                        <option value="">Select</option>
-                                        {regulations.map(r => <option key={r.id} value={r.id}>{r.code}</option>)}
-                                    </select>
+
+                                {/* Section 4: Address */}
+                                <div>
+                                    <h4 className="font-semibold text-sm text-[hsl(var(--primary))] mb-3 border-b pb-1">📍 Address</h4>
+                                    <div className="grid sm:grid-cols-3 gap-4">
+                                        <div className="space-y-1 sm:col-span-3"><Label>Present Address</Label><Input value={form.presentAddress || ''} onChange={e => setForm({ ...form, presentAddress: e.target.value })} placeholder="H.No 1-2-3, Main Road" /></div>
+                                        <div className="space-y-1 sm:col-span-3"><Label>Permanent Address</Label><Input value={form.permanentAddress || ''} onChange={e => setForm({ ...form, permanentAddress: e.target.value })} placeholder="Same as above or different" /></div>
+                                        <div className="space-y-1"><Label>City</Label><Input value={form.city || ''} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Guntur" /></div>
+                                        <div className="space-y-1"><Label>State</Label><Input value={form.state || ''} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="Andhra Pradesh" /></div>
+                                        <div className="space-y-1"><Label>Pincode</Label><Input value={form.pincode || ''} onChange={e => setForm({ ...form, pincode: e.target.value })} placeholder="522001" maxLength={6} /></div>
+                                    </div>
                                 </div>
-                                <div className="space-y-1"><Label>Batch Start</Label><Input type="number" value={form.batchStartYear || ''} onChange={e => setForm({ ...form, batchStartYear: e.target.value })} required /></div>
-                                <div className="space-y-1"><Label>Batch End</Label><Input type="number" value={form.batchEndYear || ''} onChange={e => setForm({ ...form, batchEndYear: e.target.value })} required /></div>
-                                <div className="flex items-end">
-                                    <Button type="submit" disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Register'}</Button>
+
+                                {/* Section 5: Academic Details */}
+                                <div>
+                                    <h4 className="font-semibold text-sm text-[hsl(var(--primary))] mb-3 border-b pb-1">🎓 Academic Details</h4>
+                                    <div className="grid sm:grid-cols-4 gap-4">
+                                        <div className="space-y-1">
+                                            <Label>Department *</Label>
+                                            <select value={form.departmentId || ''} onChange={e => setForm({ ...form, departmentId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Section *</Label>
+                                            <select value={form.sectionId || ''} onChange={e => setForm({ ...form, sectionId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                {sections.filter(s => !form.departmentId || s.departmentId === form.departmentId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Regulation *</Label>
+                                            <select value={form.regulationId || ''} onChange={e => setForm({ ...form, regulationId: e.target.value })} required className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                <option value="">Select</option>
+                                                {regulations.map(r => <option key={r.id} value={r.id}>{r.code}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1"><Label>Batch Start Year *</Label><Input type="number" value={form.batchStartYear || ''} onChange={e => setForm({ ...form, batchStartYear: e.target.value })} required placeholder="2022" /></div>
+                                        <div className="space-y-1"><Label>Batch End Year *</Label><Input type="number" value={form.batchEndYear || ''} onChange={e => setForm({ ...form, batchEndYear: e.target.value })} required placeholder="2026" /></div>
+                                        <div className="space-y-1">
+                                            <Label>Current Year</Label>
+                                            <select value={form.currentYear || '1'} onChange={e => setForm({ ...form, currentYear: +e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label>Current Semester</Label>
+                                            <select value={form.currentSemester || '1'} onChange={e => setForm({ ...form, currentSemester: +e.target.value })} className="flex h-10 w-full rounded-xl border border-[hsl(var(--input))] bg-transparent px-4 py-2 text-sm">
+                                                {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>Semester {s}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-2 border-t">
+                                    <Button type="button" variant="outline" onClick={() => setShowStudentForm(false)}>Cancel</Button>
+                                    <Button type="submit" variant="gradient" disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Register Student'}</Button>
                                 </div>
                             </form>
                         </CardContent>
@@ -730,11 +849,16 @@ export default function UsersPage() {
                                             {user.faculty && <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Emp: {user.faculty.empId} | {user.faculty.department?.name}</p>}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${roleColors[user.role] || ''}`}>{user.role}</span>
-                                        <Button variant="ghost" size="icon" onClick={() => toggleActive(user.id)}>
+                                        <Button variant="ghost" size="icon" onClick={() => toggleActive(user.id)} title={user.isActive ? 'Deactivate' : 'Activate'}>
                                             {user.isActive ? <UserCheck className="w-4 h-4 text-green-500" /> : <UserX className="w-4 h-4 text-red-500" />}
                                         </Button>
+                                        {user.role !== 'ADMIN' && (
+                                            <Button variant="ghost" size="icon" onClick={() => deleteUser(user.id, user.name)} title="Delete User Permanently">
+                                                <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>

@@ -3,8 +3,8 @@ import { CodeArenaService } from './code-arena.service';
 import { CodeArenaController } from './code-arena.controller';
 
 @Module({
-    controllers: [CodeArenaController],
-    providers: [CodeArenaService],
-    exports: [CodeArenaService],
+  controllers: [CodeArenaController],
+  providers: [CodeArenaService],
+  exports: [CodeArenaService],
 })
-export class CodeArenaModule { }
+export class CodeArenaModule {}

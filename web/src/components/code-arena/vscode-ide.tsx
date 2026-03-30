@@ -3,13 +3,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import {
-  Play, Square, Terminal as TerminalIcon, X, ChevronDown, ChevronRight,
-  FileCode2, FolderOpen, Search, GitBranch, Puzzle, Settings,
-  User, Bell, Wifi, WifiOff, CheckCircle2, XCircle, Loader2,
-  Copy, Download, Upload, RotateCcw, Maximize2, Minimize2, Sun, Moon,
-  FileJson, FileText, Braces, Hash, Code2, Bug, PanelBottomClose,
-  PanelBottom, LayoutGrid, Flame, BookOpen, AlertCircle, Info,
-  ChevronUp, Minus, Split, MoreHorizontal, Clock
+  Play, Terminal as TerminalIcon, X, ChevronDown,
+  CheckCircle2, XCircle, Loader2,
+  Copy, Download, RotateCcw, Maximize2, Minimize2,
+  Flame, AlertCircle, Clock, Send, ChevronUp, Sun, Moon,
+  Activity, HardDrive
 } from 'lucide-react';
 
 // ── Language configs ───────────────────────────────────────────────────
@@ -24,29 +22,87 @@ const LANGUAGES = [
   { id: 'go', label: 'Go', ext: '.go', icon: '🐹', pistonId: 'go', version: '1.16.2', template: '// V-Connect Code Arena — Go\npackage main\n\nimport "fmt"\n\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    \n    fmt.Printf("Hello, V-Connect! n = %d\\n", n)\n}\n' },
 ];
 
-// ── Extension definitions ──────────────────────────────────────────────
-const EXTENSIONS = [
-  { id: 'prettier', name: 'Prettier', desc: 'Code formatter', author: 'V-Connect', icon: '🎨', installed: true, category: 'Formatters' },
-  { id: 'bracket', name: 'Bracket Pair Colorizer', desc: 'Colorize matching brackets', author: 'V-Connect', icon: '🌈', installed: true, category: 'Visual' },
-  { id: 'autoclose', name: 'Auto Close Tag', desc: 'Auto close HTML/XML tags', author: 'V-Connect', icon: '🏷️', installed: true, category: 'Languages' },
-  { id: 'snippets', name: 'Code Snippets', desc: 'Useful code snippets for all languages', author: 'V-Connect', icon: '✂️', installed: true, category: 'Snippets' },
-  { id: 'gitlens', name: 'GitLens', desc: 'Git supercharged', author: 'V-Connect', icon: '🔍', installed: false, category: 'SCM' },
-  { id: 'liveserver', name: 'Live Server', desc: 'Launch development server', author: 'V-Connect', icon: '🚀', installed: false, category: 'Tools' },
-  { id: 'errorlens', name: 'Error Lens', desc: 'Inline error highlighting', author: 'V-Connect', icon: '🔴', installed: true, category: 'Visual' },
-  { id: 'copilot', name: 'V-Connect AI Copilot', desc: 'AI-powered code suggestions', author: 'V-Connect', icon: '🤖', installed: false, category: 'AI' },
-  { id: 'material-icon', name: 'Material Icon Theme', desc: 'Material Design icons for files', author: 'V-Connect', icon: '📁', installed: true, category: 'Themes' },
-  { id: 'indent-rainbow', name: 'Indent Rainbow', desc: 'Colorize indentation', author: 'V-Connect', icon: '🌈', installed: false, category: 'Visual' },
-  { id: 'path-intellisense', name: 'Path Intellisense', desc: 'Autocomplete file paths', author: 'V-Connect', icon: '📂', installed: false, category: 'Languages' },
-  { id: 'markdown-preview', name: 'Markdown Preview', desc: 'Preview Markdown files', author: 'V-Connect', icon: '📝', installed: true, category: 'Languages' },
-];
+// ── Complexity analysis heuristics ─────────────────────────────────────
+function analyzeComplexity(code: string, languageId: string): { time: string; space: string; note: string } {
+  const c = code;
 
-// ── File tree entries ──────────────────────────────────────────────────
-interface FileEntry {
-  name: string;
-  type: 'file' | 'folder';
-  lang?: string;
-  children?: FileEntry[];
-  content?: string;
+  // Count nested loops
+  const forLoops = (c.match(/\bfor\b/g) || []).length;
+  const whileLoops = (c.match(/\bwhile\b/g) || []).length;
+  const totalLoops = forLoops + whileLoops;
+
+  // Check for recursive patterns (string-based detection)
+  const hasRecursion =
+    c.includes('return solve(') || c.includes('return dfs(') ||
+    c.includes('return bfs(') || c.includes('return helper(') ||
+    c.includes('return dp(') || c.includes('return rec(') ||
+    c.includes('return fib(') || c.includes('return factorial(') ||
+    // Python recursion: def funcname ... funcname(
+    /def\s+(\w+)\s*\([^)]*\)[\s\S]{0,500}\1\s*\(/.test(c);
+
+  // DP / memoization
+  const hasDp = /dp\s*[\[=]|memo\s*[\[=]|cache\s*[\[=]|\[\s*\]\s*=/.test(c);
+
+  // Sort usage
+  const hasSort = /\.sort\(|sort\(|Arrays\.sort|Collections\.sort|std::sort/.test(c);
+
+  // BFS/DFS patterns
+  const hasBfsDfs = /queue|Queue|deque|Deque|BFS|DFS|bfs|dfs/.test(c);
+
+  // Hash map / set
+  const hasHash = /HashMap|HashSet|unordered_map|unordered_set|dict\b|\{\}|Map\b|Set\b/.test(c);
+
+  // Binary search
+  const hasBinarySearch = /binary_search|bisect|binarySearch|lo.*mid.*hi|left.*mid.*right/.test(c);
+
+  // Determine Time Complexity
+  let time = 'O(n)';
+  let space = 'O(1)';
+  let note = '';
+
+  if (hasBinarySearch) {
+    time = 'O(log n)';
+    note = 'Binary search pattern detected';
+  } else if (totalLoops === 0 && !hasRecursion) {
+    time = 'O(1)';
+    space = 'O(1)';
+    note = 'No loops or recursion detected';
+  } else if (hasDp && hasRecursion) {
+    time = 'O(n²)';
+    space = 'O(n)';
+    note = 'Dynamic programming with memoization detected';
+  } else if (hasDp) {
+    time = 'O(n²)';
+    space = 'O(n)';
+    note = 'DP table pattern detected';
+  } else if (totalLoops >= 3) {
+    time = 'O(n³)';
+    space = 'O(1)';
+    note = 'Triple-nested loop pattern detected';
+  } else if (totalLoops === 2 || (hasSort && totalLoops >= 1)) {
+    time = 'O(n²)';
+    space = 'O(1)';
+    note = hasSort ? 'Sort + loop pattern detected' : 'Nested loops detected';
+  } else if (hasSort) {
+    time = 'O(n log n)';
+    space = 'O(log n)';
+    note = 'Sorting dominates complexity';
+  } else if (hasRecursion) {
+    time = 'O(2ⁿ)';
+    space = 'O(n)';
+    note = 'Recursive pattern detected (may be exponential)';
+  } else if (totalLoops === 1) {
+    time = 'O(n)';
+    space = 'O(1)';
+    note = 'Single loop detected';
+  }
+
+  // Space overrides
+  if (hasHash && space === 'O(1)') space = 'O(n)';
+  if (hasBfsDfs && space === 'O(1)') space = 'O(n)';
+  if (hasDp) space = 'O(n²)' ;
+
+  return { time, space, note };
 }
 
 interface VSCodeIDEProps {
@@ -57,9 +113,6 @@ interface VSCodeIDEProps {
   submitting?: boolean;
 }
 
-type PanelType = 'terminal' | 'output' | 'problems' | 'debug';
-type SidebarView = 'explorer' | 'search' | 'git' | 'extensions' | 'settings';
-
 export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStudent, submitting }: VSCodeIDEProps) {
   const [language, setLanguage] = useState(LANGUAGES[0]);
   const [code, setCode] = useState(LANGUAGES[0].template);
@@ -67,68 +120,42 @@ export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStude
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [runTime, setRunTime] = useState<number | null>(null);
-  const [runMemory, setRunMemory] = useState<string | null>(null);
-  const [showPanel, setShowPanel] = useState(true);
-  const [activePanel, setActivePanel] = useState<PanelType>('terminal');
-  const [sidebarView, setSidebarView] = useState<SidebarView>('explorer');
-  const [showSidebar, setShowSidebar] = useState(true);
   const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark');
   const [fontSize, setFontSize] = useState(14);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [openFiles, setOpenFiles] = useState<{ name: string; lang: string; content: string }[]>([]);
-  const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [installedExtensions, setInstalledExtensions] = useState<Set<string>>(
-    new Set(EXTENSIONS.filter(e => e.installed).map(e => e.id))
-  );
-  const [terminalHistory, setTerminalHistory] = useState<string[]>([
-    '\x1b[32m❯\x1b[0m V-Connect Code Arena Terminal v2.0',
-    '\x1b[90m  Type your code, hit Run (▶) or Ctrl+Enter to execute.\x1b[0m',
-    '\x1b[90m  Powered by Piston API — supports 50+ languages.\x1b[0m',
-    '',
-  ]);
-  const [problemsList, setProblemsList] = useState<{ msg: string; severity: 'error' | 'warning' | 'info' }[]>([]);
-  const [wordWrap, setWordWrap] = useState(false);
-  const [minimap, setMinimap] = useState(true);
+  const [showInput, setShowInput] = useState(false);
   const [panelHeight, setPanelHeight] = useState(220);
+  const [complexity, setComplexity] = useState<{ time: string; space: string; note: string } | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   const editorRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<any>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const [terminalLines, setTerminalLines] = useState<{ text: string; type: 'info' | 'output' | 'error' | 'success' | 'cmd' | 'system' }[]>([
+    { text: '▶  V-Connect Code Arena Terminal  v2.0', type: 'system' },
+    { text: '   Powered by Piston API — supports 8 languages.', type: 'info' },
+    { text: '   Press ▶ Run or Ctrl+Enter to execute your code.', type: 'info' },
+    { text: '', type: 'info' },
+  ]);
 
-  // Initialize with problem or default file
+  // Scroll terminal to bottom
   useEffect(() => {
-    const fileName = `solution${language.ext}`;
-    const initialFile = { name: fileName, lang: language.id, content: code };
-    setOpenFiles([initialFile]);
-    setActiveFileIndex(0);
-  }, []);
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [terminalLines]);
 
-  // Update code when language changes
+  // Handle language change
   const handleLanguageChange = (langId: string) => {
     const lang = LANGUAGES.find(l => l.id === langId) || LANGUAGES[0];
     setLanguage(lang);
-    const newCode = lang.template;
-    setCode(newCode);
-    const fileName = `solution${lang.ext}`;
-    const newFile = { name: fileName, lang: lang.id, content: newCode };
-    const existingIndex = openFiles.findIndex(f => f.lang === lang.id);
-    if (existingIndex >= 0) {
-      const updated = [...openFiles];
-      updated[existingIndex] = newFile;
-      setOpenFiles(updated);
-      setActiveFileIndex(existingIndex);
-    } else {
-      setOpenFiles(prev => [...prev, newFile]);
-      setActiveFileIndex(openFiles.length);
-    }
+    setCode(lang.template);
+    setOutput('');
+    setRunTime(null);
+    setComplexity(null);
   };
 
-  // Monaco editor mount handler
+  // Monaco editor mount
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // Add keyboard shortcuts
     editor.addAction({
       id: 'run-code',
       label: 'Run Code',
@@ -136,17 +163,7 @@ export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStude
       run: () => handleRunCode(),
     });
 
-    editor.addAction({
-      id: 'format-code',
-      label: 'Format Document',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF],
-      run: () => {
-        editor.getAction('editor.action.formatDocument')?.run();
-      },
-    });
-
-    // Custom theme
-    monaco.editor.defineTheme('vconnect-dark', {
+    monaco.editor.defineTheme('arena-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
@@ -159,51 +176,48 @@ export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStude
         { token: 'variable', foreground: '9CDCFE' },
       ],
       colors: {
-        'editor.background': '#1e1e2e',
-        'editor.foreground': '#cdd6f4',
-        'editorCursor.foreground': '#f5e0dc',
-        'editor.lineHighlightBackground': '#313244',
-        'editorLineNumber.foreground': '#6c7086',
-        'editorLineNumber.activeForeground': '#cdd6f4',
-        'editor.selectionBackground': '#45475a',
-        'editor.inactiveSelectionBackground': '#31324466',
-        'editorIndentGuide.background1': '#31324480',
-        'editorIndentGuide.activeBackground1': '#45475a',
-        'editorBracketMatch.background': '#45475a44',
-        'editorBracketMatch.border': '#89b4fa',
+        'editor.background': '#0d1117',
+        'editor.foreground': '#e6edf3',
+        'editorCursor.foreground': '#58a6ff',
+        'editor.lineHighlightBackground': '#161b22',
+        'editorLineNumber.foreground': '#484f58',
+        'editorLineNumber.activeForeground': '#e6edf3',
+        'editor.selectionBackground': '#264f78',
+        'editor.inactiveSelectionBackground': '#264f7844',
+        'editorIndentGuide.background1': '#21262d',
+        'editorIndentGuide.activeBackground1': '#30363d',
       },
     });
 
-    monaco.editor.defineTheme('vconnect-light', {
+    monaco.editor.defineTheme('arena-light', {
       base: 'vs',
       inherit: true,
       rules: [],
       colors: {
         'editor.background': '#ffffff',
-        'editor.foreground': '#1e1e2e',
+        'editor.foreground': '#24292f',
       },
     });
 
-    editor.updateOptions({ theme: 'vconnect-dark' });
+    editor.updateOptions({ theme: 'arena-dark' });
   };
 
-  // ── Run code via Piston API ─────────────────────────────────────────
+  // Run code via Piston API
   const handleRunCode = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
     setOutput('');
     setRunTime(null);
-    setRunMemory(null);
-    setActivePanel('output');
-    setShowPanel(true);
-    setProblemsList([]);
+    setComplexity(null);
+    setHasError(false);
+
+    const timeStr = new Date().toLocaleTimeString();
+    setTerminalLines(prev => [
+      ...prev,
+      { text: `[${timeStr}] ⚡ Running ${language.label}...`, type: 'cmd' },
+    ]);
 
     const startTime = Date.now();
-
-    setTerminalHistory(prev => [
-      ...prev,
-      `\x1b[36m[${new Date().toLocaleTimeString()}]\x1b[0m \x1b[33m⚡ Running ${language.label}...\x1b[0m`,
-    ]);
 
     try {
       const response = await fetch('https://emkc.org/api/v2/piston/execute', {
@@ -222,82 +236,87 @@ export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStude
       const elapsed = Date.now() - startTime;
       setRunTime(elapsed);
 
+      // ── Compilation error (C++, Java, Rust, Go, C)
+      if (data.compile?.stderr) {
+        setHasError(true);
+        const errLines = data.compile.stderr.split('\n').filter(Boolean);
+        setOutput('Compilation Error:\n' + data.compile.stderr);
+        setTerminalLines(prev => [
+          ...prev,
+          { text: '━━━ COMPILATION ERROR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', type: 'error' },
+          ...errLines.map((l: string) => ({ text: l, type: 'error' as const })),
+          { text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', type: 'error' },
+          { text: `[${new Date().toLocaleTimeString()}] ✗ Compilation failed in ${elapsed}ms`, type: 'error' },
+          { text: '', type: 'info' },
+        ]);
+        setIsRunning(false);
+        return;
+      }
+
       if (data.run) {
         const out = data.run.stdout || '';
         const err = data.run.stderr || '';
-        const combined = out + (err ? `\n\x1b[31m${err}\x1b[0m` : '');
-        setOutput(combined || '(No output)');
+        const exitCode = data.run.code ?? 0;
+        setOutput(out + (err ? '\n' + err : ''));
 
-        if (err) {
-          const errorLines = err.split('\n').filter(Boolean);
-          setProblemsList(errorLines.map((line: string) => ({ msg: line, severity: 'error' as const })));
+        const outLines = out.trim().split('\n').filter(Boolean);
+        const errLines = err.trim().split('\n').filter(Boolean);
+
+        if (errLines.length > 0) {
+          setHasError(true);
+          setTerminalLines(prev => [
+            ...prev,
+            ...(outLines.length > 0 ? outLines.map((l: string) => ({ text: '  ' + l, type: 'output' as const })) : []),
+            { text: '━━━ RUNTIME ERROR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', type: 'error' },
+            ...errLines.map((l: string) => ({ text: l, type: 'error' as const })),
+            { text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', type: 'error' },
+            { text: `[${new Date().toLocaleTimeString()}] ✗ Runtime error in ${elapsed}ms  (exit: ${exitCode})`, type: 'error' },
+            { text: '', type: 'info' },
+          ]);
+        } else {
+          setTerminalLines(prev => [
+            ...prev,
+            ...(outLines.length > 0
+              ? outLines.map((l: string) => ({ text: '  ' + l, type: 'output' as const }))
+              : [{ text: '  (no output)', type: 'info' as const }]),
+            { text: `[${new Date().toLocaleTimeString()}] ✓ Finished in ${elapsed}ms  (exit: ${exitCode})`, type: 'success' },
+            { text: '', type: 'info' },
+          ]);
         }
-
-        setTerminalHistory(prev => [
-          ...prev,
-          ...(out ? out.split('\n').map((l: string) => `  ${l}`) : ['  (No output)']),
-          ...(err ? err.split('\n').map((l: string) => `  \x1b[31m${l}\x1b[0m`) : []),
-          `\x1b[36m[${new Date().toLocaleTimeString()}]\x1b[0m \x1b[32m✓ Done in ${elapsed}ms\x1b[0m (exit code: ${data.run.code})`,
-          '',
-        ]);
-      } else if (data.compile && data.compile.stderr) {
-        setOutput(`Compilation Error:\n${data.compile.stderr}`);
-        setProblemsList([{ msg: data.compile.stderr, severity: 'error' }]);
-        setTerminalHistory(prev => [
-          ...prev,
-          `  \x1b[31m✗ Compilation Error\x1b[0m`,
-          ...data.compile.stderr.split('\n').map((l: string) => `  \x1b[31m${l}\x1b[0m`),
-          '',
-        ]);
       } else {
-        setOutput('Unknown error occurred');
+        setHasError(true);
+        setTerminalLines(prev => [
+          ...prev,
+          { text: '  ✗ Unknown execution error', type: 'error' },
+          { text: '', type: 'info' },
+        ]);
       }
     } catch (err: any) {
-      setOutput(`Error: ${err.message}\n\nCheck your internet connection.`);
-      setTerminalHistory(prev => [
+      setHasError(true);
+      setTerminalLines(prev => [
         ...prev,
-        `  \x1b[31m✗ ${err.message}\x1b[0m`,
-        '',
+        { text: `  ✗ Network error: ${err.message}`, type: 'error' },
+        { text: '', type: 'info' },
       ]);
     }
 
     setIsRunning(false);
   }, [code, input, language, isRunning]);
 
-  // File tree for explorer
-  const fileTree: FileEntry[] = [
-    {
-      name: 'v-connect-arena', type: 'folder', children: [
-        {
-          name: 'src', type: 'folder', children: [
-            { name: `solution${language.ext}`, type: 'file', lang: language.id },
-            { name: 'input.txt', type: 'file', lang: 'plaintext' },
-          ]
-        },
-        { name: 'README.md', type: 'file', lang: 'markdown' },
-        { name: 'package.json', type: 'file', lang: 'json' },
-      ]
-    },
-  ];
-
-  const getFileIcon = (name: string) => {
-    if (name.endsWith('.js') || name.endsWith('.ts')) return <FileCode2 className="w-4 h-4 text-yellow-400" />;
-    if (name.endsWith('.py')) return <FileCode2 className="w-4 h-4 text-blue-400" />;
-    if (name.endsWith('.cpp') || name.endsWith('.c')) return <FileCode2 className="w-4 h-4 text-blue-500" />;
-    if (name.endsWith('.java')) return <FileCode2 className="w-4 h-4 text-orange-400" />;
-    if (name.endsWith('.json')) return <FileJson className="w-4 h-4 text-yellow-300" />;
-    if (name.endsWith('.md')) return <FileText className="w-4 h-4 text-blue-300" />;
-    if (name.endsWith('.rs')) return <FileCode2 className="w-4 h-4 text-orange-500" />;
-    if (name.endsWith('.go')) return <FileCode2 className="w-4 h-4 text-cyan-400" />;
-    return <FileText className="w-4 h-4 text-gray-400" />;
+  // Submit code — run complexity analysis then submit
+  const handleSubmit = async () => {
+    if (!onSubmitCode || !code.trim() || submitting) return;
+    const comp = analyzeComplexity(code, language.id);
+    setComplexity(comp);
+    const timeStr = new Date().toLocaleTimeString();
+    setTerminalLines(prev => [
+      ...prev,
+      { text: `[${timeStr}] 📤 Submitting solution for judging...`, type: 'cmd' },
+    ]);
+    await onSubmitCode(language.id, code);
   };
 
-  // Copy code to clipboard
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-  };
-
-  // Download code
+  const handleCopy = () => navigator.clipboard.writeText(code);
   const handleDownload = () => {
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -307,743 +326,411 @@ export default function VSCodeIDE({ problem, onSubmitCode, submitResult, isStude
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  // Reset code
   const handleReset = () => {
     setCode(language.template);
     setOutput('');
     setRunTime(null);
-    setProblemsList([]);
+    setComplexity(null);
   };
 
-  // File tree component
-  const FileTreeNode = ({ entry, depth = 0 }: { entry: FileEntry; depth?: number }) => {
-    const [expanded, setExpanded] = useState(true);
-    const isFolder = entry.type === 'folder';
-
-    return (
-      <div>
-        <div
-          className={`flex items-center gap-1.5 py-[3px] px-2 cursor-pointer hover:bg-[#2a2d3e] text-[13px] group transition-colors ${!isFolder && entry.name === `solution${language.ext}` ? 'bg-[#37394e] text-white' : 'text-[#cdd6f4]/80'
-            }`}
-          style={{ paddingLeft: `${depth * 14 + 8}px` }}
-          onClick={() => isFolder ? setExpanded(!expanded) : null}
-        >
-          {isFolder ? (
-            expanded ? <ChevronDown className="w-3.5 h-3.5 text-[#6c7086] shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-[#6c7086] shrink-0" />
-          ) : (
-            <span className="w-3.5 shrink-0" />
-          )}
-          {isFolder ? (
-            <FolderOpen className={`w-4 h-4 shrink-0 ${expanded ? 'text-[#89b4fa]' : 'text-[#6c7086]'}`} />
-          ) : (
-            getFileIcon(entry.name)
-          )}
-          <span className="truncate">{entry.name}</span>
-        </div>
-        {isFolder && expanded && entry.children?.map((child, i) => (
-          <FileTreeNode key={child.name + i} entry={child} depth={depth + 1} />
-        ))}
-      </div>
-    );
-  };
-
-  // ── Render ───────────────────────────────────────────────────────────
   const isDark = editorTheme === 'vs-dark';
-  const bg = isDark ? '#1e1e2e' : '#ffffff';
-  const fg = isDark ? '#cdd6f4' : '#1e1e2e';
-  const border = isDark ? '#313244' : '#e0e0e0';
-  const sidebarBg = isDark ? '#181825' : '#f3f3f3';
-  const activityBg = isDark ? '#11111b' : '#e8e8e8';
-  const panelBg = isDark ? '#181825' : '#f5f5f5';
-  const tabBg = isDark ? '#1e1e2e' : '#ffffff';
-  const tabActiveBorder = '#89b4fa';
-  const statusBg = isDark ? '#1e1e2e' : '#007acc';
-  const statusFg = isDark ? '#cdd6f4' : '#ffffff';
-  const hoverBg = isDark ? '#2a2d3e' : '#e8e8e8';
+  const bg = isDark ? '#0d1117' : '#ffffff';
+  const fg = isDark ? '#e6edf3' : '#24292f';
+  const border = isDark ? '#21262d' : '#d0d7de';
+  const panelBg = isDark ? '#010409' : '#f6f8fa';
+  const headerBg = isDark ? '#161b22' : '#f6f8fa';
+
+  const terminalColor = (type: string) => {
+    switch (type) {
+      case 'cmd': return '#58a6ff';
+      case 'output': return '#e6edf3';
+      case 'error': return '#f85149';
+      case 'success': return '#3fb950';
+      case 'system': return '#a5d6ff';
+      case 'info': return '#8b949e';
+      default: return fg;
+    }
+  };
 
   return (
     <div
-      ref={containerRef}
       className={`flex flex-col rounded-xl overflow-hidden border shadow-2xl transition-all ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}
       style={{
         borderColor: border,
         height: isFullscreen ? '100vh' : 'calc(100vh - 180px)',
-        minHeight: '500px',
+        minHeight: '520px',
         background: bg,
       }}
     >
-      {/* ═══ TITLE BAR ═══ */}
+      {/* ═══ TOP TOOLBAR ═══ */}
       <div
-        className="flex items-center justify-between px-3 h-9 shrink-0 select-none"
-        style={{ background: activityBg, borderBottom: `1px solid ${border}` }}
+        className="flex items-center justify-between px-3 h-10 shrink-0 gap-3"
+        style={{ background: headerBg, borderBottom: `1px solid ${border}` }}
       >
-        <div className="flex items-center gap-2">
+        {/* Left: traffic lights + file info */}
+        <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-[#f38ba8] hover:bg-[#f38ba8]/80 cursor-pointer" />
-            <div className="w-3 h-3 rounded-full bg-[#fab387] hover:bg-[#fab387]/80 cursor-pointer" />
-            <div className="w-3 h-3 rounded-full bg-[#a6e3a1] hover:bg-[#a6e3a1]/80 cursor-pointer" />
+            <div className="w-3 h-3 rounded-full bg-[#f85149]/80" />
+            <div className="w-3 h-3 rounded-full bg-[#d29922]/80" />
+            <div className="w-3 h-3 rounded-full bg-[#3fb950]/80" />
           </div>
-          <span className="text-[11px] ml-3" style={{ color: isDark ? '#6c7086' : '#666' }}>
-            V-Connect Code Arena — {`solution${language.ext}`}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setEditorTheme(isDark ? 'light' : 'vs-dark')}
-            className="p-1 rounded hover:bg-[#313244] transition-colors"
-            title="Toggle Theme"
-          >
-            {isDark ? <Sun className="w-3.5 h-3.5" style={{ color: '#6c7086' }} /> : <Moon className="w-3.5 h-3.5" style={{ color: '#666' }} />}
-          </button>
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1 rounded hover:bg-[#313244] transition-colors"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-          >
-            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" style={{ color: '#6c7086' }} /> : <Maximize2 className="w-3.5 h-3.5" style={{ color: '#6c7086' }} />}
-          </button>
-        </div>
-      </div>
-
-      {/* ═══ MAIN BODY ═══ */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ─── Activity Bar ─── */}
-        <div
-          className="flex flex-col items-center py-2 gap-1 shrink-0"
-          style={{ width: '48px', background: activityBg, borderRight: `1px solid ${border}` }}
-        >
-          {([
-            { view: 'explorer' as SidebarView, icon: <FileCode2 className="w-5 h-5" />, title: 'Explorer' },
-            { view: 'search' as SidebarView, icon: <Search className="w-5 h-5" />, title: 'Search' },
-            { view: 'git' as SidebarView, icon: <GitBranch className="w-5 h-5" />, title: 'Source Control' },
-            { view: 'extensions' as SidebarView, icon: <Puzzle className="w-5 h-5" />, title: 'Extensions' },
-          ]).map((item) => (
-            <button
-              key={item.view}
-              onClick={() => {
-                if (sidebarView === item.view && showSidebar) {
-                  setShowSidebar(false);
-                } else {
-                  setSidebarView(item.view);
-                  setShowSidebar(true);
-                }
-              }}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${sidebarView === item.view && showSidebar
-                  ? 'text-white'
-                  : `hover:text-white/70`
-                }`}
-              style={{
-                color: sidebarView === item.view && showSidebar ? (isDark ? '#cdd6f4' : '#1e1e2e') : (isDark ? '#6c7086' : '#999'),
-                borderLeft: sidebarView === item.view && showSidebar ? `2px solid ${tabActiveBorder}` : '2px solid transparent',
-              }}
-              title={item.title}
-            >
-              {item.icon}
-            </button>
-          ))}
-
-          <div className="flex-1" />
-
-          <button
-            onClick={() => {
-              setSidebarView('settings');
-              setShowSidebar(true);
-            }}
-            className="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
-            style={{ color: isDark ? '#6c7086' : '#999' }}
-            title="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* ─── Sidebar ─── */}
-        {showSidebar && (
-          <div
-            className="shrink-0 overflow-y-auto"
-            style={{
-              width: '240px',
-              background: sidebarBg,
-              borderRight: `1px solid ${border}`,
-            }}
-          >
-            {/* Explorer */}
-            {sidebarView === 'explorer' && (
-              <div>
-                <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  EXPLORER
-                </div>
-                <div className="px-2 pb-1">
-                  <div className="text-[11px] font-medium px-2 py-1.5 tracking-wider uppercase" style={{ color: isDark ? '#cdd6f4' : '#333' }}>
-                    V-CONNECT-ARENA
-                  </div>
-                </div>
-                {fileTree.map((entry, i) => (
-                  <FileTreeNode key={entry.name + i} entry={entry} />
-                ))}
-
-                {/* Problem info in explorer */}
-                {problem && (
-                  <div className="mt-4 border-t" style={{ borderColor: border }}>
-                    <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                      CURRENT PROBLEM
-                    </div>
-                    <div className="px-4 pb-3">
-                      <p className="text-[13px] font-medium" style={{ color: fg }}>{problem.title}</p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${problem.difficulty === 'EASY' ? 'bg-green-500/20 text-green-400'
-                          : problem.difficulty === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                        {problem.difficulty}
-                      </span>
-                      <p className="text-[11px] mt-2 leading-relaxed opacity-70" style={{ color: fg }}>{problem.description?.substring(0, 150)}...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Search */}
-            {sidebarView === 'search' && (
-              <div>
-                <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  SEARCH
-                </div>
-                <div className="px-3 pb-2">
-                  <div className="flex items-center rounded-md overflow-hidden" style={{ background: isDark ? '#313244' : '#e0e0e0' }}>
-                    <Search className="w-3.5 h-3.5 mx-2 shrink-0" style={{ color: isDark ? '#6c7086' : '#999' }} />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent py-1.5 pr-2 text-[13px] outline-none"
-                      style={{ color: fg }}
-                    />
-                  </div>
-                </div>
-                {searchQuery && (
-                  <div className="px-4 py-2 text-[12px]" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                    {code.split('\n').filter(line => line.toLowerCase().includes(searchQuery.toLowerCase())).length} results in solution{language.ext}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Git */}
-            {sidebarView === 'git' && (
-              <div>
-                <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  SOURCE CONTROL
-                </div>
-                <div className="px-4 py-8 text-center text-[12px]" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  <GitBranch className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="mb-1">No changes detected</p>
-                  <p className="text-[11px] opacity-60">Your code is tracked in the Code Arena</p>
-                </div>
-              </div>
-            )}
-
-            {/* Extensions */}
-            {sidebarView === 'extensions' && (
-              <div>
-                <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  EXTENSIONS
-                </div>
-                <div className="px-3 pb-2">
-                  <div className="flex items-center rounded-md overflow-hidden" style={{ background: isDark ? '#313244' : '#e0e0e0' }}>
-                    <Search className="w-3.5 h-3.5 mx-2 shrink-0" style={{ color: isDark ? '#6c7086' : '#999' }} />
-                    <input
-                      type="text"
-                      placeholder="Search extensions..."
-                      className="w-full bg-transparent py-1.5 pr-2 text-[13px] outline-none"
-                      style={{ color: fg }}
-                    />
-                  </div>
-                </div>
-
-                <div className="px-2 py-1 text-[11px] font-medium tracking-wider uppercase" style={{ color: isDark ? '#cdd6f4' : '#333' }}>
-                  INSTALLED
-                </div>
-                {EXTENSIONS.filter(e => installedExtensions.has(e.id)).map(ext => (
-                  <div key={ext.id} className="flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-[#2a2d3e]">
-                    <span className="text-lg mt-0.5">{ext.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium truncate" style={{ color: fg }}>{ext.name}</p>
-                      <p className="text-[11px] truncate" style={{ color: isDark ? '#6c7086' : '#999' }}>{ext.desc}</p>
-                      <p className="text-[10px]" style={{ color: isDark ? '#45475a' : '#ccc' }}>{ext.author}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const next = new Set(installedExtensions);
-                        next.delete(ext.id);
-                        setInstalledExtensions(next);
-                      }}
-                      className="text-[10px] px-2 py-0.5 rounded mt-1 shrink-0"
-                      style={{
-                        background: isDark ? '#313244' : '#e0e0e0',
-                        color: isDark ? '#cdd6f4' : '#333',
-                      }}
-                    >
-                      Disable
-                    </button>
-                  </div>
-                ))}
-
-                <div className="px-2 py-1 mt-2 text-[11px] font-medium tracking-wider uppercase" style={{ color: isDark ? '#cdd6f4' : '#333' }}>
-                  RECOMMENDED
-                </div>
-                {EXTENSIONS.filter(e => !installedExtensions.has(e.id)).map(ext => (
-                  <div key={ext.id} className="flex items-start gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-[#2a2d3e]">
-                    <span className="text-lg mt-0.5">{ext.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium truncate" style={{ color: fg }}>{ext.name}</p>
-                      <p className="text-[11px] truncate" style={{ color: isDark ? '#6c7086' : '#999' }}>{ext.desc}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setInstalledExtensions(prev => new Set([...prev, ext.id]));
-                      }}
-                      className="text-[10px] px-2 py-0.5 rounded mt-1 shrink-0 font-medium"
-                      style={{
-                        background: '#89b4fa',
-                        color: '#1e1e2e',
-                      }}
-                    >
-                      Install
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Settings */}
-            {sidebarView === 'settings' && (
-              <div>
-                <div className="px-4 py-2.5 text-[11px] font-semibold tracking-widest uppercase" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                  SETTINGS
-                </div>
-                <div className="px-4 space-y-4 py-2">
-                  <div>
-                    <label className="text-[11px] font-medium block mb-1.5" style={{ color: isDark ? '#6c7086' : '#666' }}>Font Size</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="10"
-                        max="24"
-                        value={fontSize}
-                        onChange={e => setFontSize(Number(e.target.value))}
-                        className="flex-1 accent-[#89b4fa]"
-                      />
-                      <span className="text-[12px] w-8 text-right" style={{ color: fg }}>{fontSize}px</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-medium block mb-1.5" style={{ color: isDark ? '#6c7086' : '#666' }}>Theme</label>
-                    <select
-                      value={editorTheme}
-                      onChange={e => setEditorTheme(e.target.value as 'vs-dark' | 'light')}
-                      className="w-full text-[12px] rounded px-2 py-1.5 outline-none"
-                      style={{ background: isDark ? '#313244' : '#e0e0e0', color: fg }}
-                    >
-                      <option value="vs-dark">V-Connect Dark (Catppuccin)</option>
-                      <option value="light">V-Connect Light</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[12px]" style={{ color: fg }}>Word Wrap</label>
-                    <button
-                      onClick={() => setWordWrap(!wordWrap)}
-                      className="px-3 py-1 rounded text-[11px] font-medium transition-colors"
-                      style={{ background: wordWrap ? '#89b4fa' : (isDark ? '#313244' : '#e0e0e0'), color: wordWrap ? '#1e1e2e' : fg }}
-                    >
-                      {wordWrap ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[12px]" style={{ color: fg }}>Minimap</label>
-                    <button
-                      onClick={() => setMinimap(!minimap)}
-                      className="px-3 py-1 rounded text-[11px] font-medium transition-colors"
-                      style={{ background: minimap ? '#89b4fa' : (isDark ? '#313244' : '#e0e0e0'), color: minimap ? '#1e1e2e' : fg }}
-                    >
-                      {minimap ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ─── Editor Area ─── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tab Bar */}
-          <div
-            className="flex items-center shrink-0 overflow-x-auto"
-            style={{ background: isDark ? '#11111b' : '#e8e8e8', borderBottom: `1px solid ${border}`, height: '36px' }}
-          >
-            {/* Language file tab */}
-            <div
-              className="flex items-center gap-1.5 px-3 h-full cursor-pointer border-r shrink-0"
-              style={{
-                background: tabBg,
-                borderColor: border,
-                borderTop: `2px solid ${tabActiveBorder}`,
-              }}
-            >
-              {getFileIcon(`solution${language.ext}`)}
-              <span className="text-[12px]" style={{ color: fg }}>solution{language.ext}</span>
-              <X className="w-3 h-3 ml-1 opacity-0 hover:opacity-100 transition-opacity" style={{ color: isDark ? '#6c7086' : '#999' }} />
-            </div>
-            {/* Input tab */}
-            <div
-              className="flex items-center gap-1.5 px-3 h-full cursor-pointer border-r shrink-0"
-              style={{
-                background: isDark ? '#11111b' : '#e8e8e8',
-                borderColor: border,
-              }}
-              onClick={() => { }}
-            >
-              <FileText className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-[12px] opacity-60" style={{ color: fg }}>input.txt</span>
-            </div>
-
-            <div className="flex-1" />
-
-            {/* Toolbar */}
-            <div className="flex items-center gap-0.5 px-2 shrink-0">
-              {/* Language Selector */}
-              <select
-                value={language.id}
-                onChange={e => handleLanguageChange(e.target.value)}
-                className="text-[11px] rounded px-2 py-1 outline-none border-none cursor-pointer font-medium mr-1"
-                style={{ background: isDark ? '#313244' : '#e0e0e0', color: fg }}
-              >
-                {LANGUAGES.map(l => (
-                  <option key={l.id} value={l.id}>{l.icon} {l.label}</option>
-                ))}
-              </select>
-
-              <button onClick={handleCopy} className="p-1.5 rounded transition-colors" style={{ color: isDark ? '#6c7086' : '#999' }} title="Copy Code">
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={handleDownload} className="p-1.5 rounded transition-colors" style={{ color: isDark ? '#6c7086' : '#999' }} title="Download">
-                <Download className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={handleReset} className="p-1.5 rounded transition-colors" style={{ color: isDark ? '#6c7086' : '#999' }} title="Reset Code">
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Run Button */}
-              <button
-                onClick={handleRunCode}
-                disabled={isRunning}
-                className="flex items-center gap-1.5 px-3 py-1 rounded text-[12px] font-medium transition-all ml-1"
-                style={{
-                  background: isRunning ? '#45475a' : '#a6e3a1',
-                  color: '#1e1e2e',
-                }}
-              >
-                {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                {isRunning ? 'Running...' : 'Run'}
-              </button>
-
-              {/* Submit Button (for students with a problem) */}
-              {isStudent && problem && onSubmitCode && (
-                <button
-                  onClick={() => onSubmitCode(language.id, code)}
-                  disabled={submitting || !code.trim()}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded text-[12px] font-medium transition-all ml-1"
-                  style={{
-                    background: submitting ? '#45475a' : '#89b4fa',
-                    color: '#1e1e2e',
-                  }}
-                >
-                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                  Submit
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Breadcrumb */}
-          <div
-            className="flex items-center gap-1 px-4 py-1 text-[11px] shrink-0"
-            style={{ background: bg, borderBottom: `1px solid ${border}`, color: isDark ? '#6c7086' : '#999' }}
-          >
-            <span>v-connect-arena</span>
-            <ChevronRight className="w-3 h-3" />
-            <span>src</span>
-            <ChevronRight className="w-3 h-3" />
-            <span style={{ color: fg }}>solution{language.ext}</span>
-          </div>
-
-          {/* Editor + Panel Split */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Monaco Editor */}
-            <div className="flex-1 overflow-hidden">
-              <Editor
-                height="100%"
-                language={language.id === 'cpp' ? 'cpp' : language.id === 'c' ? 'c' : language.id}
-                value={code}
-                onChange={(value) => setCode(value || '')}
-                onMount={handleEditorMount}
-                theme={editorTheme === 'vs-dark' ? 'vconnect-dark' : 'vconnect-light'}
-                options={{
-                  fontSize,
-                  fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace",
-                  fontLigatures: true,
-                  minimap: { enabled: minimap },
-                  wordWrap: wordWrap ? 'on' : 'off',
-                  smoothScrolling: true,
-                  cursorBlinking: 'smooth',
-                  cursorSmoothCaretAnimation: 'on',
-                  renderWhitespace: 'selection',
-                  bracketPairColorization: { enabled: true },
-                  guides: { bracketPairs: true, indentation: true },
-                  suggest: { showKeywords: true, showSnippets: true },
-                  padding: { top: 12, bottom: 12 },
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  lineNumbers: 'on',
-                  glyphMargin: true,
-                  folding: true,
-                  links: true,
-                  contextmenu: true,
-                  quickSuggestions: true,
-                  parameterHints: { enabled: true },
-                  tabSize: language.id === 'python' ? 4 : 2,
-                }}
-              />
-            </div>
-
-            {/* ─── Bottom Panel ─── */}
-            {showPanel && (
-              <div
-                style={{
-                  height: `${panelHeight}px`,
-                  background: panelBg,
-                  borderTop: `1px solid ${border}`,
-                }}
-                className="shrink-0 flex flex-col overflow-hidden"
-              >
-                {/* Panel Tabs */}
-                <div
-                  className="flex items-center justify-between shrink-0 px-2"
-                  style={{ borderBottom: `1px solid ${border}`, background: isDark ? '#181825' : '#f0f0f0' }}
-                >
-                  <div className="flex items-center">
-                    {([
-                      { id: 'output' as PanelType, label: 'OUTPUT', icon: <Code2 className="w-3.5 h-3.5" /> },
-                      { id: 'terminal' as PanelType, label: 'TERMINAL', icon: <TerminalIcon className="w-3.5 h-3.5" /> },
-                      { id: 'problems' as PanelType, label: `PROBLEMS${problemsList.length > 0 ? ` (${problemsList.length})` : ''}`, icon: <AlertCircle className="w-3.5 h-3.5" /> },
-                      { id: 'debug' as PanelType, label: 'INPUT', icon: <Bug className="w-3.5 h-3.5" /> },
-                    ]).map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => setActivePanel(p.id)}
-                        className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium tracking-wider transition-colors"
-                        style={{
-                          color: activePanel === p.id ? fg : (isDark ? '#6c7086' : '#999'),
-                          borderBottom: activePanel === p.id ? `2px solid ${tabActiveBorder}` : '2px solid transparent',
-                        }}
-                      >
-                        {p.icon}
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      onClick={() => setPanelHeight(h => Math.min(h + 50, 400))}
-                      className="p-1 rounded transition-colors"
-                      style={{ color: isDark ? '#6c7086' : '#999' }}
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setPanelHeight(h => Math.max(h - 50, 120))}
-                      className="p-1 rounded transition-colors"
-                      style={{ color: isDark ? '#6c7086' : '#999' }}
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => setShowPanel(false)} className="p-1 rounded transition-colors" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Panel Content */}
-                <div className="flex-1 overflow-auto font-mono text-[12px] p-3" style={{ color: fg }}>
-                  {activePanel === 'output' && (
-                    <div>
-                      {output ? (
-                        <div>
-                          {runTime !== null && (
-                            <div className="flex items-center gap-3 mb-2 pb-2" style={{ borderBottom: `1px solid ${border}` }}>
-                              <span className="flex items-center gap-1 text-[11px]" style={{ color: '#a6e3a1' }}>
-                                <Clock className="w-3 h-3" /> {runTime}ms
-                              </span>
-                              <span className="text-[11px]" style={{ color: isDark ? '#6c7086' : '#999' }}>|</span>
-                              <span className="text-[11px]" style={{ color: '#89b4fa' }}>{language.label}</span>
-                            </div>
-                          )}
-                          <pre className="whitespace-pre-wrap leading-relaxed">{output}</pre>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center h-full opacity-40">
-                          <p>Run your code to see output here (Ctrl+Enter)</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activePanel === 'terminal' && (
-                    <div>
-                      {terminalHistory.map((line, i) => (
-                        <div key={i} className="leading-5">
-                          {line.split(/\x1b\[(\d+)m/).reduce((acc: React.ReactNode[], part, idx) => {
-                            if (idx % 2 === 0) {
-                              acc.push(<span key={idx}>{part}</span>);
-                            }
-                            return acc;
-                          }, [])}
-                          {!line.includes('\x1b') && line}
-                        </div>
-                      ))}
-                      <div className="flex items-center gap-1 mt-1">
-                        <span style={{ color: '#a6e3a1' }}>❯</span>
-                        <span className="animate-pulse">▊</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {activePanel === 'problems' && (
-                    <div>
-                      {problemsList.length === 0 ? (
-                        <div className="flex items-center justify-center h-full opacity-40">
-                          <p>No problems detected ✓</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {problemsList.map((p, i) => (
-                            <div key={i} className="flex items-start gap-2 py-1">
-                              {p.severity === 'error' ? (
-                                <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#f38ba8]" />
-                              ) : p.severity === 'warning' ? (
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#fab387]" />
-                              ) : (
-                                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#89b4fa]" />
-                              )}
-                              <span className="text-[11px]">{p.msg}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activePanel === 'debug' && (
-                    <div className="h-full flex flex-col">
-                      <div className="text-[11px] mb-1.5 font-medium" style={{ color: isDark ? '#6c7086' : '#999' }}>
-                        STDIN — Provide input for your program
-                      </div>
-                      <textarea
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        placeholder="Enter your input here..."
-                        className="flex-1 w-full bg-transparent outline-none resize-none text-[13px] rounded-md p-2"
-                        style={{
-                          background: isDark ? '#1e1e2e' : '#fff',
-                          color: fg,
-                          border: `1px solid ${border}`,
-                        }}
-                        spellCheck={false}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══ STATUS BAR ═══ */}
-      <div
-        className="flex items-center justify-between px-3 h-6 shrink-0 select-none"
-        style={{
-          background: isDark ? '#181825' : '#007acc',
-          borderTop: `1px solid ${border}`,
-          color: isDark ? '#6c7086' : '#ffffff',
-        }}
-      >
-        <div className="flex items-center gap-3 text-[11px]">
-          <span className="flex items-center gap-1">
-            <GitBranch className="w-3 h-3" /> main
-          </span>
-          <span className="flex items-center gap-1">
-            {problemsList.length === 0 ? (
-              <><CheckCircle2 className="w-3 h-3" /> 0 errors</>
-            ) : (
-              <><XCircle className="w-3 h-3 text-[#f38ba8]" /> {problemsList.length} errors</>
-            )}
-          </span>
-          {!showPanel && (
-            <button
-              onClick={() => setShowPanel(true)}
-              className="flex items-center gap-1 hover:underline"
-            >
-              <TerminalIcon className="w-3 h-3" /> Terminal
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-3 text-[11px]">
-          {runTime !== null && (
-            <span className="flex items-center gap-1" style={{ color: isDark ? '#a6e3a1' : '#fff' }}>
-              <Clock className="w-3 h-3" /> {runTime}ms
+          <div className="flex items-center gap-1.5">
+            <TerminalIcon className="w-3.5 h-3.5" style={{ color: '#58a6ff' }} />
+            <span className="text-[12px] font-medium" style={{ color: fg }}>
+              solution{language.ext}
             </span>
-          )}
-          <span>{language.label}</span>
-          <span>UTF-8</span>
-          <span>Ln {code.split('\n').length}, Col 1</span>
-          <span className="flex items-center gap-1">
-            <Wifi className="w-3 h-3" /> Piston API
-          </span>
-          <span className="flex items-center gap-1">
-            {isRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-            {isRunning ? 'Executing...' : 'Ready'}
-          </span>
-        </div>
-      </div>
-
-      {/* Submit Result */}
-      {submitResult && (
-        <div
-          className="mx-4 mb-3 mt-1 p-3 rounded-lg text-[13px]"
-          style={{
-            background: submitResult.status === 'ACCEPTED' ? '#a6e3a120' : '#f38ba820',
-            border: `1px solid ${submitResult.status === 'ACCEPTED' ? '#a6e3a1' : '#f38ba8'}`,
-            color: submitResult.status === 'ACCEPTED' ? '#a6e3a1' : '#f38ba8',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {submitResult.status === 'ACCEPTED' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-              <span className="font-semibold">{submitResult.status === 'ACCEPTED' ? '✅ Accepted!' : `❌ ${submitResult.status}`}</span>
-              <span className="opacity-70 text-[11px]">Tests: {submitResult.testsPassed}/{submitResult.totalTests}</span>
-            </div>
-            {submitResult.vPointsEarned > 0 && (
-              <span className="flex items-center gap-1 text-[#cba6f7] font-bold">
-                <Flame className="w-4 h-4" /> +{submitResult.vPointsEarned} V-Points
+            {problem && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ml-1 ${
+                problem.difficulty === 'EASY' ? 'bg-green-500/20 text-green-400'
+                : problem.difficulty === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400'
+                : 'bg-red-500/20 text-red-400'
+              }`}>
+                {problem.difficulty}
               </span>
             )}
           </div>
         </div>
+
+        {/* Center: language selector */}
+        <select
+          value={language.id}
+          onChange={e => handleLanguageChange(e.target.value)}
+          className="text-[12px] rounded-lg px-3 py-1 outline-none border font-medium cursor-pointer"
+          style={{ background: isDark ? '#21262d' : '#ffffff', color: fg, borderColor: border }}
+        >
+          {LANGUAGES.map(l => (
+            <option key={l.id} value={l.id}>{l.icon} {l.label}</option>
+          ))}
+        </select>
+
+        {/* Right: tools + run + submit */}
+        <div className="flex items-center gap-1">
+          <button onClick={() => setEditorTheme(isDark ? 'light' : 'vs-dark')} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" title="Toggle Theme">
+            {isDark ? <Sun className="w-3.5 h-3.5" style={{ color: '#8b949e' }} /> : <Moon className="w-3.5 h-3.5" style={{ color: '#8b949e' }} />}
+          </button>
+          <button onClick={handleCopy} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" style={{ color: '#8b949e' }} title="Copy Code">
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleDownload} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" style={{ color: '#8b949e' }} title="Download">
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleReset} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" style={{ color: '#8b949e' }} title="Reset">
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-1.5 rounded-lg transition-colors hover:bg-white/10" style={{ color: '#8b949e' }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Font size */}
+          <div className="flex items-center gap-1 mx-1">
+            <button onClick={() => setFontSize(s => Math.max(10, s - 1))} className="w-5 h-5 text-[11px] rounded flex items-center justify-center hover:bg-white/10" style={{ color: '#8b949e' }}>−</button>
+            <span className="text-[11px] w-6 text-center" style={{ color: '#8b949e' }}>{fontSize}</span>
+            <button onClick={() => setFontSize(s => Math.min(24, s + 1))} className="w-5 h-5 text-[11px] rounded flex items-center justify-center hover:bg-white/10" style={{ color: '#8b949e' }}>+</button>
+          </div>
+
+          {/* Input toggle */}
+          <button
+            onClick={() => setShowInput(v => !v)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all"
+            style={{ background: showInput ? '#58a6ff22' : 'transparent', color: showInput ? '#58a6ff' : '#8b949e', border: `1px solid ${showInput ? '#58a6ff44' : 'transparent'}` }}
+            title="Toggle STDIN Input"
+          >
+            <TerminalIcon className="w-3 h-3" /> STDIN
+          </button>
+
+          {/* Run button */}
+          <button
+            onClick={handleRunCode}
+            disabled={isRunning}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold transition-all ml-1"
+            style={{ background: isRunning ? '#21262d' : '#238636', color: isRunning ? '#8b949e' : '#ffffff', border: `1px solid ${isRunning ? '#30363d' : '#2ea043'}` }}
+          >
+            {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            {isRunning ? 'Running...' : 'Run'}
+          </button>
+
+          {/* Submit button */}
+          {isStudent && problem && onSubmitCode && (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !code.trim()}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold transition-all"
+              style={{ background: submitting ? '#21262d' : '#1f6feb', color: submitting ? '#8b949e' : '#ffffff', border: `1px solid ${submitting ? '#30363d' : '#388bfd'}` }}
+            >
+              {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3 h-3" />}
+              Submit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ MAIN CONTENT ═══ */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* STDIN input panel (collapsible) */}
+        {showInput && (
+          <div className="shrink-0 flex flex-col" style={{ maxHeight: '120px', borderBottom: `1px solid ${border}`, background: isDark ? '#161b22' : '#f6f8fa' }}>
+            <div className="flex items-center justify-between px-3 py-1" style={{ borderBottom: `1px solid ${border}` }}>
+              <span className="text-[11px] font-semibold tracking-wider" style={{ color: '#58a6ff' }}>STDIN</span>
+              <button onClick={() => setShowInput(false)} style={{ color: '#8b949e' }}><X className="w-3 h-3" /></button>
+            </div>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Enter program input here..."
+              className="flex-1 w-full bg-transparent outline-none resize-none text-[13px] p-2 font-mono"
+              style={{ color: fg }}
+              spellCheck={false}
+            />
+          </div>
+        )}
+
+        {/* Monaco Editor */}
+        <div className="flex-1 overflow-hidden">
+          <Editor
+            height="100%"
+            language={language.id === 'cpp' ? 'cpp' : language.id === 'c' ? 'c' : language.id}
+            value={code}
+            onChange={(value) => setCode(value || '')}
+            onMount={handleEditorMount}
+            theme={isDark ? 'arena-dark' : 'arena-light'}
+            options={{
+              fontSize,
+              fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace",
+              fontLigatures: true,
+              minimap: { enabled: false },
+              wordWrap: 'off',
+              smoothScrolling: true,
+              cursorBlinking: 'smooth',
+              cursorSmoothCaretAnimation: 'on',
+              renderWhitespace: 'selection',
+              bracketPairColorization: { enabled: true },
+              guides: { bracketPairs: true, indentation: true },
+              suggest: { showKeywords: true, showSnippets: true },
+              padding: { top: 12, bottom: 12 },
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              lineNumbers: 'on',
+              glyphMargin: false,
+              folding: true,
+              links: true,
+              contextmenu: true,
+              quickSuggestions: true,
+              parameterHints: { enabled: true },
+              tabSize: language.id === 'python' ? 4 : 2,
+            }}
+          />
+        </div>
+
+        {/* ─── Terminal ─── */}
+        <div
+          className="shrink-0 flex flex-col"
+          style={{ height: `${panelHeight}px`, background: panelBg, borderTop: `1px solid ${border}` }}
+        >
+          {/* Terminal header */}
+          <div
+            className="flex items-center justify-between px-3 h-8 shrink-0"
+            style={{ background: isDark ? '#161b22' : '#f0f3f6', borderBottom: `1px solid ${border}` }}
+          >
+            <div className="flex items-center gap-2">
+              <TerminalIcon className="w-3.5 h-3.5" style={{ color: '#58a6ff' }} />
+              <span className="text-[11px] font-semibold tracking-wider" style={{ color: '#58a6ff' }}>TERMINAL</span>
+              {runTime !== null && (
+                <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: '#3fb95020', color: '#3fb950' }}>
+                  <Clock className="w-2.5 h-2.5" /> {runTime}ms
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPanelHeight(h => Math.min(h + 60, 420))}
+                className="p-0.5 rounded hover:bg-white/10"
+                style={{ color: '#8b949e' }}
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setPanelHeight(h => Math.max(h - 60, 100))}
+                className="p-0.5 rounded hover:bg-white/10"
+                style={{ color: '#8b949e' }}
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setTerminalLines([
+                  { text: '▶  Terminal cleared.', type: 'system' },
+                  { text: '', type: 'info' },
+                ])}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-white/10 ml-1"
+                style={{ color: '#8b949e' }}
+              >
+                clear
+              </button>
+            </div>
+          </div>
+
+          {/* Terminal output */}
+          <div className="flex-1 overflow-auto p-3 font-mono text-[12px]">
+            {terminalLines.map((line, i) => (
+              <div key={i} className="leading-5 whitespace-pre-wrap" style={{ color: terminalColor(line.type) }}>
+                {line.text || '\u00A0'}
+              </div>
+            ))}
+            <div className="flex items-center gap-1 mt-1">
+              <span style={{ color: '#3fb950' }}>❯</span>
+              <span className="animate-pulse" style={{ color: '#58a6ff' }}>▊</span>
+            </div>
+            <div ref={terminalEndRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ SUBMISSION RESULT + COMPLEXITY + TEST CASES ═══ */}
+      {submitResult && (
+        <div
+          className="shrink-0 mx-3 mb-3 rounded-xl overflow-hidden"
+          style={{ border: `1px solid ${submitResult.status === 'ACCEPTED' ? '#2ea043' : '#f85149'}`, maxHeight: '320px', overflowY: 'auto' }}
+        >
+          {/* Status row */}
+          <div
+            className="flex items-center justify-between px-4 py-2.5 sticky top-0 z-10"
+            style={{ background: submitResult.status === 'ACCEPTED' ? '#238636' : submitResult.status === 'COMPILE_ERROR' ? '#6e1616' : '#b62324' }}
+          >
+            <div className="flex items-center gap-2">
+              {submitResult.status === 'ACCEPTED'
+                ? <CheckCircle2 className="w-4 h-4 text-white" />
+                : <XCircle className="w-4 h-4 text-white" />}
+              <span className="font-bold text-[13px] text-white">
+                {submitResult.status === 'ACCEPTED' ? '✅ Accepted' :
+                 submitResult.status === 'COMPILE_ERROR' ? '🔴 Compilation Error' :
+                 `❌ ${submitResult.status}`}
+              </span>
+              <span className="text-[11px] text-white/70">
+                {submitResult.totalTests > 0 ? `Tests: ${submitResult.testsPassed}/${submitResult.totalTests} passed` : 'No test cases'}
+              </span>
+            </div>
+            {submitResult.vPointsEarned > 0 && (
+              <span className="flex items-center gap-1 text-[12px] font-bold text-white">
+                <Flame className="w-4 h-4" /> +{submitResult.vPointsEarned} V-Points
+              </span>
+            )}
+          </div>
+
+          {/* Compilation Error Detail */}
+          {submitResult.compilationError && (
+            <div className="px-4 py-3" style={{ background: isDark ? '#160d0d' : '#fff0f0' }}>
+              <p className="text-[11px] font-semibold mb-1" style={{ color: '#f85149' }}>🔴 Compilation Error</p>
+              <pre className="text-[11px] whitespace-pre-wrap font-mono" style={{ color: '#f85149' }}>{submitResult.compilationError}</pre>
+            </div>
+          )}
+
+          {/* Per-test-case breakdown */}
+          {submitResult.testResults && submitResult.testResults.length > 0 && (
+            <div style={{ background: isDark ? '#0d1117' : '#ffffff' }}>
+              {submitResult.testResults.map((tc: any, i: number) => (
+                <div
+                  key={i}
+                  className="px-4 py-2.5 border-t"
+                  style={{ borderColor: border }}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {tc.passed
+                      ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: '#3fb950' }} />
+                      : <XCircle className="w-3.5 h-3.5 shrink-0" style={{ color: '#f85149' }} />}
+                    <span className="text-[11px] font-semibold" style={{ color: tc.passed ? '#3fb950' : '#f85149' }}>
+                      Test Case {tc.index} — {tc.passed ? 'Passed' : 'Failed'}
+                    </span>
+                    <span className="text-[10px] ml-auto" style={{ color: '#8b949e' }}>{tc.executionTime}ms</span>
+                  </div>
+                  {!tc.passed && (
+                    <div className="grid grid-cols-2 gap-2 ml-5">
+                      {tc.input && (
+                        <div>
+                          <p className="text-[9px] font-semibold tracking-wider mb-0.5" style={{ color: '#8b949e' }}>INPUT</p>
+                          <pre className="text-[11px] font-mono p-1.5 rounded" style={{ background: isDark ? '#161b22' : '#f6f8fa', color: fg }}>{tc.input}</pre>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[9px] font-semibold tracking-wider mb-0.5" style={{ color: '#8b949e' }}>EXPECTED</p>
+                        <pre className="text-[11px] font-mono p-1.5 rounded" style={{ background: isDark ? '#1a2e1a' : '#f0fff0', color: '#3fb950' }}>{tc.expected || '(empty)'}</pre>
+                      </div>
+                      {tc.actual !== undefined && !tc.error && (
+                        <div className={tc.input ? '' : 'col-span-1'}>
+                          <p className="text-[9px] font-semibold tracking-wider mb-0.5" style={{ color: '#8b949e' }}>YOUR OUTPUT</p>
+                          <pre className="text-[11px] font-mono p-1.5 rounded" style={{ background: isDark ? '#2e1a1a' : '#fff0f0', color: '#f85149' }}>{tc.actual || '(empty)'}</pre>
+                        </div>
+                      )}
+                      {tc.error && (
+                        <div className="col-span-2">
+                          <p className="text-[9px] font-semibold tracking-wider mb-0.5" style={{ color: '#f85149' }}>ERROR</p>
+                          <pre className="text-[11px] font-mono p-1.5 rounded whitespace-pre-wrap" style={{ background: isDark ? '#160d0d' : '#fff0f0', color: '#f85149' }}>{tc.error}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Complexity row */}
+          {complexity && (
+            <div
+              className="flex items-stretch border-t"
+              style={{ background: isDark ? '#161b22' : '#f6f8fa', borderColor: border }}
+            >
+              <div className="flex-1 flex flex-col items-center justify-center py-2.5 px-4 gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <Activity className="w-3 h-3" style={{ color: '#58a6ff' }} />
+                  <span className="text-[9px] font-semibold tracking-wider" style={{ color: '#8b949e' }}>TIME</span>
+                </div>
+                <span className="text-[16px] font-bold" style={{ color: '#58a6ff', fontFamily: 'monospace' }}>{complexity.time}</span>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center py-2.5 px-4 gap-0.5 border-l" style={{ borderColor: border }}>
+                <div className="flex items-center gap-1.5">
+                  <HardDrive className="w-3 h-3" style={{ color: '#bc8cff' }} />
+                  <span className="text-[9px] font-semibold tracking-wider" style={{ color: '#8b949e' }}>SPACE</span>
+                </div>
+                <span className="text-[16px] font-bold" style={{ color: '#bc8cff', fontFamily: 'monospace' }}>{complexity.space}</span>
+              </div>
+              {complexity.note && (
+                <div className="flex-1 flex flex-col items-center justify-center py-2.5 px-4 gap-0.5 border-l" style={{ borderColor: border }}>
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="w-3 h-3" style={{ color: '#d29922' }} />
+                    <span className="text-[9px] font-semibold tracking-wider" style={{ color: '#8b949e' }}>ANALYSIS</span>
+                  </div>
+                  <span className="text-[10px] text-center" style={{ color: '#d29922' }}>{complexity.note}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
+
+      {/* ═══ STATUS BAR ═══ */}
+      <div
+        className="flex items-center justify-between px-3 h-6 shrink-0 select-none transition-colors"
+        style={{ background: hasError ? '#b62324' : isDark ? '#238636' : '#0969da', color: '#ffffff' }}
+      >
+        <div className="flex items-center gap-3 text-[10px]">
+          <span className="flex items-center gap-1">
+            <TerminalIcon className="w-2.5 h-2.5" /> V-Connect Code Arena
+          </span>
+          <span>{language.label}</span>
+        </div>
+        <div className="flex items-center gap-3 text-[10px]">
+          {runTime !== null && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" /> {runTime}ms
+            </span>
+          )}
+          <span>UTF-8</span>
+          <span>Ln {code.split('\n').length}</span>
+          <span className="flex items-center gap-1">
+            {isRunning ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <CheckCircle2 className="w-2.5 h-2.5" />}
+            {isRunning ? 'Executing...' : 'Piston API Ready'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

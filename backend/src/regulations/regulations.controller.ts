@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RegulationsService } from './regulations.service';
 import { CreateRegulationDto } from './dto/create-regulation.dto';
@@ -12,25 +21,35 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('regulations')
 export class RegulationsController {
-    constructor(private service: RegulationsService) { }
+  constructor(private service: RegulationsService) {}
 
-    @Post()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Create regulation' })
-    create(@Body() dto: CreateRegulationDto) { return this.service.create(dto); }
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create regulation' })
+  create(@Body() dto: CreateRegulationDto) {
+    return this.service.create(dto);
+  }
 
-    @Get()
-    @ApiOperation({ summary: 'List regulations' })
-    findAll() { return this.service.findAll(); }
+  @Get()
+  @ApiOperation({ summary: 'List regulations' })
+  findAll() {
+    return this.service.findAll();
+  }
 
-    @Get(':id')
-    findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
+  }
 
-    @Put(':id')
-    @Roles(UserRole.ADMIN)
-    update(@Param('id') id: string, @Body() dto: Partial<CreateRegulationDto>) { return this.service.update(id, dto); }
+  @Put(':id')
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() dto: Partial<CreateRegulationDto>) {
+    return this.service.update(id, dto);
+  }
 
-    @Delete(':id')
-    @Roles(UserRole.ADMIN)
-    remove(@Param('id') id: string) { return this.service.remove(id); }
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
 }

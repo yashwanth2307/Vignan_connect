@@ -3,7 +3,7 @@ import { OnlineClassesService } from './online-classes.service';
 import { OnlineClassesController } from './online-classes.controller';
 
 @Module({
-    controllers: [OnlineClassesController],
-    providers: [OnlineClassesService],
+  controllers: [OnlineClassesController],
+  providers: [OnlineClassesService],
 })
-export class OnlineClassesModule { }
+export class OnlineClassesModule {}

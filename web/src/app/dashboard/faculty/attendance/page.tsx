@@ -6,8 +6,20 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, Users, CheckCircle2, XCircle, Loader2, UserCheck, UserX, ClipboardList } from 'lucide-react';
+import { Play, Square, Users, CheckCircle2, XCircle, Loader2, UserCheck, UserX, ClipboardList, Clock, Briefcase, Stethoscope } from 'lucide-react';
 import api from '@/lib/api';
+
+type AttStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'OD' | 'ML';
+
+const STATUS_META: Record<AttStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: any }> = {
+    PRESENT: { label: 'Present', color: 'text-green-700', bgColor: 'bg-green-50 dark:bg-green-950/20', borderColor: 'border-green-300 dark:border-green-800', icon: CheckCircle2 },
+    ABSENT:  { label: 'Absent',  color: 'text-red-700',   bgColor: 'bg-red-50 dark:bg-red-950/20',     borderColor: 'border-red-300 dark:border-red-800',     icon: XCircle },
+    LATE:    { label: 'Late',    color: 'text-yellow-700', bgColor: 'bg-yellow-50 dark:bg-yellow-950/20', borderColor: 'border-yellow-300 dark:border-yellow-800', icon: Clock },
+    OD:      { label: 'On Duty', color: 'text-blue-700',   bgColor: 'bg-blue-50 dark:bg-blue-950/20',   borderColor: 'border-blue-300 dark:border-blue-800',   icon: Briefcase },
+    ML:      { label: 'Medical', color: 'text-purple-700', bgColor: 'bg-purple-50 dark:bg-purple-950/20', borderColor: 'border-purple-300 dark:border-purple-800', icon: Stethoscope },
+};
+
+const STATUS_CYCLE: AttStatus[] = ['PRESENT', 'ABSENT', 'LATE', 'OD', 'ML'];
 
 function AttendanceContent() {
     const searchParams = useSearchParams();
@@ -19,8 +31,7 @@ function AttendanceContent() {
     const [selectedHour, setSelectedHour] = useState(hour);
     const [session, setSession] = useState<any>(null);
     const [students, setStudents] = useState<any[]>([]);
-    // Track attendance status per student: 'PRESENT' | 'ABSENT'
-    const [attendanceMap, setAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
+    const [attendanceMap, setAttendanceMap] = useState<Record<string, AttStatus>>({});
     const [loading, setLoading] = useState(true);
     const [starting, setStarting] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -43,8 +54,7 @@ function AttendanceContent() {
             setSession(data.session);
             const studentsList = data.students || [];
             setStudents(studentsList);
-            // Default all students to PRESENT
-            const defaultMap: Record<string, 'PRESENT' | 'ABSENT'> = {};
+            const defaultMap: Record<string, AttStatus> = {};
             studentsList.forEach((s: any) => { defaultMap[s.id] = 'PRESENT'; });
             setAttendanceMap(defaultMap);
             setSubmitted(false);
@@ -54,39 +64,34 @@ function AttendanceContent() {
         setStarting(false);
     };
 
-    const toggleStudent = (studentId: string) => {
-        setAttendanceMap(prev => ({
-            ...prev,
-            [studentId]: prev[studentId] === 'PRESENT' ? 'ABSENT' : 'PRESENT',
-        }));
+    const cycleStatus = (studentId: string) => {
+        setAttendanceMap(prev => {
+            const current = prev[studentId] || 'PRESENT';
+            const idx = STATUS_CYCLE.indexOf(current);
+            const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+            return { ...prev, [studentId]: next };
+        });
     };
 
-    const markAllPresent = () => {
-        const map: Record<string, 'PRESENT' | 'ABSENT'> = {};
-        students.forEach(s => { map[s.id] = 'PRESENT'; });
+    const markAllStatus = (status: AttStatus) => {
+        const map: Record<string, AttStatus> = {};
+        students.forEach(s => { map[s.id] = status; });
         setAttendanceMap(map);
     };
 
-    const markAllAbsent = () => {
-        const map: Record<string, 'PRESENT' | 'ABSENT'> = {};
-        students.forEach(s => { map[s.id] = 'ABSENT'; });
-        setAttendanceMap(map);
-    };
-
-    const presentCount = Object.values(attendanceMap).filter(v => v === 'PRESENT').length;
-    const absentCount = Object.values(attendanceMap).filter(v => v === 'ABSENT').length;
+    const statusCounts = STATUS_CYCLE.reduce((acc, s) => {
+        acc[s] = Object.values(attendanceMap).filter(v => v === s).length;
+        return acc;
+    }, {} as Record<AttStatus, number>);
 
     const submitAttendance = async () => {
         if (!session) return;
         setSaving(true);
         try {
-            const presentIds = Object.entries(attendanceMap)
-                .filter(([, status]) => status === 'PRESENT')
-                .map(([id]) => id);
-            await api.post(`/attendance/sessions/${session.id}/mark`, {
-                studentIds: presentIds,
-            });
-            // Stop the session after marking
+            const records = Object.entries(attendanceMap).map(([studentId, status]) => ({
+                studentId, status
+            }));
+            await api.post(`/attendance/sessions/${session.id}/mark`, { records });
             await api.post(`/attendance/sessions/${session.id}/stop`);
             setSubmitted(true);
         } catch (err: any) { alert(err.message); }
@@ -106,10 +111,9 @@ function AttendanceContent() {
         <div className="space-y-6">
             <div>
                 <h2 className="text-2xl font-bold">Mark Attendance</h2>
-                <p className="text-[hsl(var(--muted-foreground))]">Select course offering, then mark each student as Present or Absent</p>
+                <p className="text-[hsl(var(--muted-foreground))]">Click each student to cycle: Present → Absent → Late → OD → Medical Leave</p>
             </div>
 
-            {/* === No Active Session: Show Start Controls === */}
             {!session ? (
                 <Card>
                     <CardContent className="p-6">
@@ -134,32 +138,32 @@ function AttendanceContent() {
                     </CardContent>
                 </Card>
             ) : submitted ? (
-                /* === Submission Success === */
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                     <Card className="border-green-200 dark:border-green-800">
                         <CardContent className="p-8 text-center">
                             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
                             <h3 className="text-2xl font-bold mb-2 text-green-700 dark:text-green-400">Attendance Submitted!</h3>
-                            <p className="text-[hsl(var(--muted-foreground))] mb-4">
-                                <span className="text-green-600 font-semibold">{presentCount} Present</span> &nbsp;•&nbsp;
-                                <span className="text-red-500 font-semibold">{absentCount} Absent</span> &nbsp;•&nbsp;
-                                Total {students.length} students
-                            </p>
-                            <div className="flex gap-3 justify-center">
+                            <div className="flex flex-wrap gap-3 justify-center mb-4">
+                                {STATUS_CYCLE.map(s => statusCounts[s] > 0 && (
+                                    <span key={s} className={`font-semibold ${STATUS_META[s].color}`}>
+                                        {statusCounts[s]} {STATUS_META[s].label}
+                                    </span>
+                                ))}
+                                <span className="text-[hsl(var(--muted-foreground))]">/ {students.length} Total</span>
+                            </div>
+                            <div className="flex gap-3 justify-center mb-4">
                                 <Badge variant="secondary">{session.courseOffering?.subject?.title || 'Subject'}</Badge>
                                 <Badge variant="outline">{session.courseOffering?.section?.name || 'Section'}</Badge>
                                 <Badge variant="outline">Period {session.hourIndex}</Badge>
                             </div>
-                            <Button onClick={resetSession} variant="gradient" className="mt-6">
+                            <Button onClick={resetSession} variant="gradient" className="mt-3">
                                 <ClipboardList className="w-4 h-4 mr-2" /> Take Another Attendance
                             </Button>
                         </CardContent>
                     </Card>
                 </motion.div>
             ) : (
-                /* === Active Session: Mark Students === */
                 <div className="space-y-4">
-                    {/* Session Header */}
                     <Card className="overflow-hidden">
                         <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4">
                             <div className="flex items-center justify-between">
@@ -179,58 +183,57 @@ function AttendanceContent() {
                                 <Badge variant="outline">Period {session.hourIndex}</Badge>
                                 <Badge>{new Date().toLocaleDateString()}</Badge>
                             </div>
-                            <div className="flex gap-2 items-center flex-wrap">
-                                <Button size="sm" variant="outline" onClick={markAllPresent} className="text-xs text-green-600 border-green-200 hover:bg-green-50">
-                                    <UserCheck className="w-3.5 h-3.5 mr-1" /> All Present
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={markAllAbsent} className="text-xs text-red-500 border-red-200 hover:bg-red-50">
-                                    <UserX className="w-3.5 h-3.5 mr-1" /> All Absent
-                                </Button>
-                                <div className="ml-auto flex gap-3 text-sm font-medium">
-                                    <span className="text-green-600">✓ {presentCount} Present</span>
-                                    <span className="text-red-500">✗ {absentCount} Absent</span>
+                            <div className="flex gap-2 items-center flex-wrap mb-2">
+                                {STATUS_CYCLE.map(s => {
+                                    const meta = STATUS_META[s];
+                                    return (
+                                        <Button key={s} size="sm" variant="outline" onClick={() => markAllStatus(s)}
+                                            className={`text-xs ${meta.color} hover:${meta.bgColor}`}>
+                                            All {meta.label}
+                                        </Button>
+                                    );
+                                })}
+                                <div className="ml-auto flex gap-3 text-sm font-medium flex-wrap">
+                                    {STATUS_CYCLE.map(s => statusCounts[s] > 0 && (
+                                        <span key={s} className={STATUS_META[s].color}>
+                                            {statusCounts[s]} {STATUS_META[s].label}
+                                        </span>
+                                    ))}
                                     <span className="text-[hsl(var(--muted-foreground))]">/ {students.length} Total</span>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Student List */}
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {students.map((s, i) => {
                             const status = attendanceMap[s.id] || 'PRESENT';
-                            const isPresent = status === 'PRESENT';
+                            const meta = STATUS_META[status];
+                            const IconComp = meta.icon;
                             return (
-                                <motion.div
-                                    key={s.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.015 }}
-                                >
+                                <motion.div key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.015 }}>
                                     <button
-                                        onClick={() => toggleStudent(s.id)}
-                                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${isPresent
-                                                ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800'
-                                                : 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800'
-                                            }`}
+                                        onClick={() => cycleStatus(s.id)}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${meta.bgColor} ${meta.borderColor}`}
                                     >
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${isPresent
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-red-500 text-white'
-                                            }`}>
-                                            {isPresent ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors
+                                            ${status === 'PRESENT' ? 'bg-green-500 text-white' :
+                                            status === 'ABSENT' ? 'bg-red-500 text-white' :
+                                            status === 'LATE' ? 'bg-yellow-500 text-white' :
+                                            status === 'OD' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}`}>
+                                            <IconComp className="w-5 h-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm truncate">{s.user?.name}</p>
                                             <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.rollNo}</p>
                                         </div>
-                                        <Badge
-                                            className={`text-[10px] shrink-0 ${isPresent
-                                                    ? 'bg-green-100 text-green-700 border-green-200'
-                                                    : 'bg-red-100 text-red-700 border-red-200'
-                                                }`}
-                                        >
-                                            {isPresent ? 'PRESENT' : 'ABSENT'}
+                                        <Badge className={`text-[10px] shrink-0 
+                                            ${status === 'PRESENT' ? 'bg-green-100 text-green-700 border-green-200' :
+                                            status === 'ABSENT' ? 'bg-red-100 text-red-700 border-red-200' :
+                                            status === 'LATE' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                            status === 'OD' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                            'bg-purple-100 text-purple-700 border-purple-200'}`}>
+                                            {meta.label.toUpperCase()}
                                         </Badge>
                                     </button>
                                 </motion.div>
@@ -247,14 +250,13 @@ function AttendanceContent() {
                         </Card>
                     )}
 
-                    {/* Submit Button */}
                     {students.length > 0 && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="sticky bottom-4">
                             <Button onClick={submitAttendance} disabled={saving} variant="gradient" size="lg" className="w-full text-base py-6 shadow-lg">
                                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                                     <>
                                         <CheckCircle2 className="w-5 h-5 mr-2" />
-                                        Submit Attendance — {presentCount} Present, {absentCount} Absent
+                                        Submit — {STATUS_CYCLE.filter(s => statusCounts[s] > 0).map(s => `${statusCounts[s]} ${STATUS_META[s].label}`).join(', ')}
                                     </>
                                 )}
                             </Button>

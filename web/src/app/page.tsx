@@ -161,6 +161,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Vision & Mission from vignanits.ac.in */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-900/50">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold">Vision & Mission</h2>
+            <p className="text-[hsl(var(--muted-foreground))] mt-4 max-w-2xl mx-auto">Our guiding principles as per Vignan Institute of Technology and Science</p>
+          </motion.div>
+          <div className="grid md:grid-cols-2 gap-12">
+            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-xl h-full border border-blue-100 dark:border-blue-900/30">
+                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/50 rounded-2xl flex items-center justify-center mb-6">
+                  <Star className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Our Vision</h3>
+                <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-medium italic">
+                  &quot;To evolve into a center of excellence in Science and Technology through creative and innovative practices in teaching-learning, promoting academic achievement & research excellence to produce internationally accepted, competitive, and world class professionals who are psychologically strong and emotionally balanced imprinted with social ethics.&quot;
+                </p>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }}>
+              <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-xl h-full border border-purple-100 dark:border-purple-900/30">
+                <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/50 rounded-2xl flex items-center justify-center mb-6">
+                  <Award className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Our Mission</h3>
+                <ul className="space-y-4 text-lg text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3"><ArrowRight className="w-6 h-6 mt-0.5 shrink-0 text-purple-500" /> To provide high quality academic programmes, training activities, research facilities.</li>
+                  <li className="flex items-start gap-3"><ArrowRight className="w-6 h-6 mt-0.5 shrink-0 text-purple-500" /> To promote continuous industry-institute interaction for employability, entrepreneurship, leadership and research aptitude.</li>
+                  <li className="flex items-start gap-3"><ArrowRight className="w-6 h-6 mt-0.5 shrink-0 text-purple-500" /> To contribute to the economical and technological development.</li>
+                </ul>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Leadership Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-6">

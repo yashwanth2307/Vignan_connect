@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { WebhookModule } from './webhooks/webhook.module';
+import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -20,6 +21,10 @@ import { CodeArenaModule } from './code-arena/code-arena.module';
 import { SkillCoursesModule } from './skill-courses/skill-courses.module';
 import { AdminBotModule } from './admin-bot/admin-bot.module';
 import { GroupsModule } from './groups/groups.module';
+import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
+import { SemesterPromotionModule } from './semester-promotion/semester-promotion.module';
+import { RequestsModule } from './requests/requests.module';
+import { ClubsModule } from './clubs/clubs.module';
 
 @Module({
   imports: [
@@ -27,6 +32,7 @@ import { GroupsModule } from './groups/groups.module';
     PrismaModule,
     RedisModule,
     WebhookModule,
+    EmailModule,
     AuthModule,
     UsersModule,
     DepartmentsModule,
@@ -44,6 +50,10 @@ import { GroupsModule } from './groups/groups.module';
     SkillCoursesModule,
     AdminBotModule,
     GroupsModule,
+    AcademicCalendarModule,
+    SemesterPromotionModule,
+    RequestsModule,
+    ClubsModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

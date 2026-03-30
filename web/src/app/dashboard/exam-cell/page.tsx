@@ -1,139 +1,275 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ClipboardCheck, BarChart3, Users, Award, Calendar, BookOpen, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { Ticket, Loader2, CheckCircle2, Shield, Lock, Unlock, FileDown, BarChart3 } from 'lucide-react';
 import api from '@/lib/api';
 
-export default function ExamCellDashboard() {
-    const [stats, setStats] = useState({ exams: 0, evaluations: 0, subjects: 0, students: 0 });
-    const [loading, setLoading] = useState(true);
+export default function ExamCellPage() {
+    const [semesters, setSemesters] = useState<any[]>([]);
+    const [sections, setSections] = useState<any[]>([]);
+    const [selectedSemester, setSelectedSemester] = useState('');
+    const [selectedSection, setSelectedSection] = useState('');
+    const [marks, setMarks] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const [genResult, setGenResult] = useState<any>(null);
+    const [tab, setTab] = useState<'halltickets' | 'marks'>('halltickets');
 
     useEffect(() => {
-        async function load() {
+        (async () => {
             try {
-                const [users, subjects] = await Promise.all([
-                    api.get<any[]>('/users'),
-                    api.get<any[]>('/subjects'),
-                ]);
-                setStats({
-                    exams: 0,
-                    evaluations: 0,
-                    subjects: subjects.length,
-                    students: users.filter((u: any) => u.role === 'STUDENT').length,
-                });
-            } catch { /* ignore */ }
-            setLoading(false);
-        }
-        load();
+                const sems = await api.get<any[]>('/exam/semesters');
+                setSemesters(sems);
+                const depts = await api.get<any[]>('/departments');
+                const allSec: any[] = [];
+                for (const d of depts) {
+                    const detail = await api.get<any>(`/departments/${d.id}`);
+                    if (detail.sections) detail.sections.forEach((s: any) => allSec.push({ ...s, deptName: d.name }));
+                }
+                setSections(allSec);
+            } catch {}
+        })();
     }, []);
 
-    const statCards = [
-        { label: 'Active Exams', value: stats.exams, icon: FileText, gradient: 'from-red-500 to-rose-600' },
-        { label: 'Evaluations', value: stats.evaluations, icon: ClipboardCheck, gradient: 'from-blue-500 to-blue-600' },
-        { label: 'Subjects', value: stats.subjects, icon: BookOpen, gradient: 'from-purple-500 to-purple-600' },
-        { label: 'Total Students', value: stats.students, icon: Users, gradient: 'from-green-500 to-emerald-600' },
-    ];
+    const generateHallTickets = async () => {
+        if (!selectedSemester) return;
+        setGenerating(true);
+        setGenResult(null);
+        try {
+            const res = await api.post<any>('/exam/hall-tickets/generate', {
+                semesterId: selectedSemester,
+                sectionId: selectedSection || undefined,
+            });
+            setGenResult(res);
+        } catch (e: any) { setGenResult({ error: e.message }); }
+        setGenerating(false);
+    };
+
+    const loadMarks = async () => {
+        if (!selectedSemester) return;
+        setLoading(true);
+        try {
+            const data = await api.get<any[]>(`/exam/marks?semesterId=${selectedSemester}`);
+            setMarks(data);
+        } catch {}
+        setLoading(false);
+    };
+
+    const verifyMark = async (id: string) => {
+        try {
+            await api.patch(`/exam/marks/${id}/verify`, {});
+            loadMarks();
+        } catch {}
+    };
+
+    const lockMark = async (id: string) => {
+        try {
+            await api.patch(`/exam/marks/${id}/lock`, {});
+            loadMarks();
+        } catch {}
+    };
+
+    const releaseResults = async () => {
+        if (!selectedSemester || !confirm('Release all locked marks for this semester?')) return;
+        try {
+            await api.post(`/exam/results/release/${selectedSemester}`, {});
+            alert('Results released!');
+            loadMarks();
+        } catch (e: any) { alert(e.message); }
+    };
+
+    const downloadMarksReport = async () => {
+        if (!selectedSemester) return;
+        try {
+            let url = `/exam/reports/marks?semesterId=${selectedSemester}`;
+            if (selectedSection) url += `&sectionId=${selectedSection}`;
+            const data = await api.get<any[]>(url);
+            const header = 'Roll No,Name,Section,Department,Subject,Subject Title,Semester,Mid 1,Mid 2,Internal,External,Final,Status\n';
+            const rows = data.map(r => `${r.rollNo},${r.name},${r.section},${r.department},${r.subject},${r.subjectTitle},${r.semester},${r.mid1 || ''},${r.mid2 || ''},${r.internal || ''},${r.external || ''},${r.final || ''},${r.status}`).join('\n');
+            const blob = new Blob([header + rows], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `marks_report_sem${semesters.find(s => s.id === selectedSemester)?.number || ''}.csv`;
+            a.click();
+        } catch (e: any) { alert(e.message); }
+    };
+
+    const downloadAttendanceReport = async () => {
+        if (!selectedSemester) return;
+        try {
+            let url = `/exam/reports/attendance?semesterId=${selectedSemester}`;
+            if (selectedSection) url += `&sectionId=${selectedSection}`;
+            const data = await api.get<any[]>(url);
+            const header = 'Roll No,Name,Section,Department,Subject,Total Classes,Present,Absent,Late,OD,ML,Percentage\n';
+            const rows = data.map(r => `${r.rollNo},${r.name},${r.section},${r.department},${r.subject},${r.totalClasses},${r.present},${r.absent},${r.late},${r.od},${r.ml},${r.percentage}%`).join('\n');
+            const blob = new Blob([header + rows], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `attendance_report_sem${semesters.find(s => s.id === selectedSemester)?.number || ''}.csv`;
+            a.click();
+        } catch (e: any) { alert(e.message); }
+    };
+
+    const statusColor: Record<string, string> = {
+        DRAFT: 'bg-gray-100 text-gray-700',
+        SUBMITTED: 'bg-blue-100 text-blue-700',
+        VERIFIED: 'bg-yellow-100 text-yellow-700',
+        LOCKED: 'bg-orange-100 text-orange-700',
+        RELEASED: 'bg-green-100 text-green-700',
+    };
 
     return (
         <div className="space-y-6">
-            {/* Campus Banner */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative rounded-2xl overflow-hidden"
-            >
-                <img src="/images/campus1.jpg" alt="Campus" className="w-full h-40 object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-red-950/90 via-rose-950/80 to-purple-950/70" />
-                <div className="absolute inset-0 flex items-center px-6 gap-4">
-                    <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center p-1">
-                        <img src="/images/logo.png" alt="Logo" className="w-12 h-12 rounded-full object-contain" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-white">Exam Cell Dashboard</h2>
-                        <p className="text-red-200/80 text-sm">Manage examinations, evaluations, and results</p>
-                    </div>
-                </div>
-            </motion.div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((stat, i) => (
-                    <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                        <Card className="hover:shadow-soft-lg transition-all duration-300 overflow-hidden group">
-                            <CardContent className="p-5">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-[hsl(var(--muted-foreground))]">{stat.label}</p>
-                                        <p className="text-3xl font-bold mt-1">{loading ? '—' : stat.value}</p>
-                                    </div>
-                                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                        <stat.icon className="w-6 h-6 text-white" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
+            <div>
+                <h2 className="text-2xl font-bold">🏛️ Examination Cell</h2>
+                <p className="text-[hsl(var(--muted-foreground))]">Hall tickets, marks verification, and result release</p>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                    <Card>
-                        <CardHeader><CardTitle>Exam Management</CardTitle></CardHeader>
-                        <CardContent className="space-y-3">
-                            {[
-                                { icon: Calendar, label: 'Create Exam Session', desc: 'Schedule new mid/semester exams', href: '/dashboard/exam-cell/sessions', color: 'text-red-500 bg-red-50 dark:bg-red-950/30' },
-                                { icon: FileText, label: 'Generate Answer Scripts', desc: 'Create barcoded answer sheets for students', href: '/dashboard/exam-cell/scripts', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/30' },
-                                { icon: ClipboardCheck, label: 'Distribute for Evaluation', desc: 'Assign scripts to faculty for blind evaluation', href: '/dashboard/exam-cell/evaluation', color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/30' },
-                                { icon: BarChart3, label: 'Release Results', desc: 'Verify marks and publish results', href: '/dashboard/exam-cell/results', color: 'text-green-500 bg-green-50 dark:bg-green-950/30' },
-                            ].map((action) => (
-                                <Link key={action.label} href={action.href}>
-                                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-[hsl(var(--accent))] transition-colors cursor-pointer group">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${action.color}`}>
-                                            <action.icon className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-sm">{action.label}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{action.desc}</p>
-                                        </div>
-                                        <ArrowRight className="w-4 h-4 text-[hsl(var(--muted-foreground))] opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                </Link>
-                            ))}
-                        </CardContent>
-                    </Card>
-                </motion.div>
+            {/* Tabs */}
+            <div className="flex gap-2">
+                <Button variant={tab === 'halltickets' ? 'gradient' : 'outline'} size="sm" onClick={() => setTab('halltickets')}>
+                    <Ticket className="w-4 h-4 mr-1" /> Hall Tickets
+                </Button>
+                <Button variant={tab === 'marks' ? 'gradient' : 'outline'} size="sm" onClick={() => { setTab('marks'); loadMarks(); }}>
+                    <BarChart3 className="w-4 h-4 mr-1" /> Marks & Results
+                </Button>
+            </div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-                    <Card>
-                        <CardHeader><CardTitle>Exam Workflow</CardTitle></CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {[
-                                    { step: '1', title: 'Create Session', desc: 'Set up exam (Mid-1, Mid-2, Semester)', status: 'ready' },
-                                    { step: '2', title: 'Generate Scripts', desc: 'Auto-create barcoded answer sheets per student', status: 'ready' },
-                                    { step: '3', title: 'Conduct Exam', desc: 'Print and distribute answer scripts', status: 'pending' },
-                                    { step: '4', title: 'Blind Evaluation', desc: 'Faculty evaluates without seeing names', status: 'pending' },
-                                    { step: '5', title: 'Verify & Publish', desc: 'Cross-verify marks and release results', status: 'pending' },
-                                ].map((item, i) => (
-                                    <div key={item.step} className="flex items-start gap-4">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${item.status === 'ready' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' : 'bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]'}`}>
-                                            {item.step}
-                                        </div>
-                                        <div className="flex-1 pb-4 border-b border-[hsl(var(--border)/0.5)] last:border-0">
-                                            <p className="font-medium text-sm">{item.title}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">{item.desc}</p>
-                                        </div>
+            {/* Filters */}
+            <Card>
+                <CardContent className="p-4">
+                    <div className="grid sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium">Semester</label>
+                            <select value={selectedSemester} onChange={e => { setSelectedSemester(e.target.value); }} className="w-full h-10 rounded-xl border border-[hsl(var(--input))] bg-transparent px-3 text-sm">
+                                <option value="">Select Semester</option>
+                                {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} ({s.department?.code || ''})</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium">Section (optional)</label>
+                            <select value={selectedSection} onChange={e => setSelectedSection(e.target.value)} className="w-full h-10 rounded-xl border border-[hsl(var(--input))] bg-transparent px-3 text-sm">
+                                <option value="">All Sections</option>
+                                {sections.map(s => <option key={s.id} value={s.id}>{s.name} ({s.deptName})</option>)}
+                            </select>
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <Button size="sm" variant="outline" onClick={downloadMarksReport} disabled={!selectedSemester}>
+                                <FileDown className="w-3 h-3 mr-1" /> Marks CSV
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={downloadAttendanceReport} disabled={!selectedSemester}>
+                                <FileDown className="w-3 h-3 mr-1" /> Attendance CSV
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Hall Tickets Tab */}
+            {tab === 'halltickets' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Ticket className="w-5 h-5" /> Generate Hall Tickets</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                            Generate hall tickets for all students in the selected semester. Students can then download their hall tickets from their dashboard.
+                        </p>
+                        <Button onClick={generateHallTickets} variant="gradient" disabled={generating || !selectedSemester}>
+                            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ticket className="w-4 h-4 mr-1" /> Generate Hall Tickets</>}
+                        </Button>
+                        <AnimatePresence>
+                            {genResult && (
+                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                    className={`p-4 rounded-xl border ${genResult.error ? 'border-red-200 bg-red-50 dark:bg-red-950/20' : 'border-green-200 bg-green-50 dark:bg-green-950/20'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className={`w-5 h-5 ${genResult.error ? 'text-red-600' : 'text-green-600'}`} />
+                                        <p className="font-medium text-sm">{genResult.error || genResult.message}</p>
                                     </div>
-                                ))}
+                                    {genResult.generated !== undefined && (
+                                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Generated: {genResult.generated} / Total students: {genResult.total}</p>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Marks Tab */}
+            {tab === 'marks' && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5" /> Marks ({marks.length})</CardTitle>
+                        <div className="flex gap-2">
+                            <Button size="sm" onClick={loadMarks}><Loader2 className="w-3 h-3 mr-1" />Refresh</Button>
+                            <Button size="sm" variant="gradient" onClick={releaseResults} disabled={!selectedSemester}>
+                                <Unlock className="w-3 h-3 mr-1" />Release Results
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+                        ) : marks.length === 0 ? (
+                            <p className="text-center text-sm text-[hsl(var(--muted-foreground))] py-8">No marks found. Select a semester and refresh.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left p-2 text-xs">Roll No</th>
+                                            <th className="text-left p-2 text-xs">Name</th>
+                                            <th className="text-left p-2 text-xs">Subject</th>
+                                            <th className="text-center p-2 text-xs">Mid 1</th>
+                                            <th className="text-center p-2 text-xs">Mid 2</th>
+                                            <th className="text-center p-2 text-xs">Internal</th>
+                                            <th className="text-center p-2 text-xs">External</th>
+                                            <th className="text-center p-2 text-xs">Status</th>
+                                            <th className="text-center p-2 text-xs">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {marks.map((m, i) => (
+                                            <motion.tr key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }}
+                                                className="border-b hover:bg-[hsl(var(--muted))]/30">
+                                                <td className="p-2 text-xs font-mono">{m.student?.rollNo}</td>
+                                                <td className="p-2 text-xs">{m.student?.user?.name}</td>
+                                                <td className="p-2 text-xs">{m.subject?.code}</td>
+                                                <td className="p-2 text-center text-xs">{m.mid1 ?? '-'}</td>
+                                                <td className="p-2 text-center text-xs">{m.mid2 ?? '-'}</td>
+                                                <td className="p-2 text-center text-xs">{m.internal ?? '-'}</td>
+                                                <td className="p-2 text-center text-xs">{m.external ?? '-'}</td>
+                                                <td className="p-2 text-center">
+                                                    <Badge className={`text-[10px] ${statusColor[m.status] || ''}`}>{m.status}</Badge>
+                                                </td>
+                                                <td className="p-2 text-center">
+                                                    <div className="flex gap-1 justify-center">
+                                                        {m.status === 'SUBMITTED' && (
+                                                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => verifyMark(m.id)}>
+                                                                <Shield className="w-3 h-3 mr-1" />Verify
+                                                            </Button>
+                                                        )}
+                                                        {m.status === 'VERIFIED' && (
+                                                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => lockMark(m.id)}>
+                                                                <Lock className="w-3 h-3 mr-1" />Lock
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

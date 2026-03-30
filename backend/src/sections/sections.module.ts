@@ -3,8 +3,8 @@ import { SectionsService } from './sections.service';
 import { SectionsController } from './sections.controller';
 
 @Module({
-    controllers: [SectionsController],
-    providers: [SectionsService],
-    exports: [SectionsService],
+  controllers: [SectionsController],
+  providers: [SectionsService],
+  exports: [SectionsService],
 })
-export class SectionsModule { }
+export class SectionsModule {}

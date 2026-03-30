@@ -4,8 +4,8 @@ import { AdminBotService } from './admin-bot.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [AdminBotController],
-    providers: [AdminBotService],
+  imports: [PrismaModule],
+  controllers: [AdminBotController],
+  providers: [AdminBotService],
 })
-export class AdminBotModule { }
+export class AdminBotModule {}

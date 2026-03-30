@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -21,6 +21,7 @@ enum UserRole {
   HOD
   FACULTY
   STUDENT
+  ALUMNI
   EXAM_CELL
   TPO
 }
@@ -28,6 +29,9 @@ enum UserRole {
 enum AttendanceStatus {
   PRESENT
   ABSENT
+  LATE
+  OD
+  ML
 }
 
 enum AttendanceMethod {
@@ -118,6 +122,8 @@ model User {
   createdSkillCourses SkillCourse[]
   groupMessages       GroupMessage[]
   clubsCoordinated    Club[]             @relation("ClubCoordinator")
+  requestsSent        ServiceRequest[]   @relation("requestFrom")
+  requestsReceived    ServiceRequest[]   @relation("requestTo")
 
   @@map("users")
 }
@@ -215,7 +221,44 @@ model Student {
   regulation     Regulation @relation(fields: [regulationId], references: [id])
   batchStartYear Int
   batchEndYear   Int
+  currentYear    Int        @default(1)   // 1-4
+  currentSemester Int       @default(1)   // 1-8
   photoUrl       String?
+  gender         String?                  // Male|Female|Other
+  dob            DateTime?
+  bloodGroup     String?
+  aadharNumber   String?
+  admissionType  String     @default("REGULAR")  // REGULAR|LATERAL
+  category       String?                  // OC|BC|SC|ST|EWS
+  religion       String?
+  nationality    String     @default("Indian")
+
+  // Student's own contact
+  studentPhone   String?
+
+  // Father Details
+  fatherName        String?
+  fatherPhone       String?
+  fatherOccupation  String?
+  fatherEmail       String?
+
+  // Mother Details
+  motherName        String?
+  motherPhone       String?
+  motherOccupation  String?
+  motherEmail       String?
+
+  // Guardian (optional)
+  guardianName      String?
+  guardianPhone     String?
+  guardianRelation  String?
+
+  // Address
+  presentAddress    String?
+  permanentAddress  String?
+  city              String?
+  state             String?
+  pincode           String?
 
   attendanceRecords     AttendanceRecord[]
   submissions           Submission[]
@@ -233,6 +276,7 @@ model Student {
   groupMemberships      GroupMember[]
   groupSubmissions      GroupSubmission[]
   clubMemberships       ClubMember[]
+  promotionRecords      SemesterPromotionRecord[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -272,6 +316,11 @@ model Subject {
   title          String
   credits        Int
   semesterNumber Int
+  weeklyHours    Int        @default(3)   // periods per week (for timetable)
+  subjectType    String     @default("THEORY") // THEORY|LAB|PROJECT|SEMINAR
+  isLab          Boolean    @default(false)
+  isElective     Boolean    @default(false)
+  isActive       Boolean    @default(true)
   regulationId   String
   regulation     Regulation @relation(fields: [regulationId], references: [id])
   departmentId   String
@@ -343,6 +392,8 @@ model AttendanceSession {
   date             DateTime
   hourIndex        Int
   status           SessionStatus  @default(ACTIVE)
+  isLocked         Boolean        @default(false)
+  remarks          String?
 
   records AttendanceRecord[]
 
@@ -360,6 +411,7 @@ model AttendanceRecord {
   student             Student           @relation(fields: [studentId], references: [id])
   status              AttendanceStatus  @default(PRESENT)
   markedAt            DateTime          @default(now())
+  remarks             String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1004,4 +1056,103 @@ model ClubEvent {
   updatedAt DateTime @updatedAt
 
   @@map("club_events")
+}
+
+// ──────────────────────────────────────────
+// ACADEMIC CALENDAR
+// ──────────────────────────────────────────
+
+model AcademicCalendar {
+  id           String   @id @default(uuid())
+  title        String                     // "Sankranti Holiday"
+  eventType    String                     // HOLIDAY|EXAM|SEMESTER_START|SEMESTER_END|INTERNAL_EXAM|WORKING_SATURDAY|SPECIAL_EVENT|RESULT_DATE
+  startDate    DateTime
+  endDate      DateTime?
+  academicYear String                     // "2024-25"
+  semester     Int?                       // null = applies to all semesters
+  departmentId String?                    // null = college-wide
+  description  String?
+  isPublished  Boolean  @default(false)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([academicYear])
+  @@index([startDate])
+  @@map("academic_calendar")
+}
+
+// ──────────────────────────────────────────
+// SEMESTER PROMOTION
+// ──────────────────────────────────────────
+
+model SemesterPromotion {
+  id              String   @id @default(uuid())
+  batchStartYear  Int
+  batchEndYear    Int
+  departmentId    String
+  fromSemester    Int
+  toSemester      Int
+  fromYear        Int
+  toYear          Int
+  academicYear    String
+  promotedCount   Int      @default(0)
+  promotedById    String?
+  notes           String?
+  promotedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  records         SemesterPromotionRecord[]
+
+  @@index([departmentId])
+  @@index([batchStartYear, batchEndYear])
+  @@map("semester_promotions")
+}
+
+model SemesterPromotionRecord {
+  id           String   @id @default(uuid())
+  promotionId  String
+  promotion    SemesterPromotion @relation(fields: [promotionId], references: [id])
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  fromSemester Int
+  toSemester   Int
+  fromYear     Int
+  toYear       Int
+  newSectionId String?
+  createdAt    DateTime @default(now())
+
+  @@unique([promotionId, studentId])
+  @@map("semester_promotion_records")
+}
+
+// ──────────────────────────────────────────
+// SERVICE REQUESTS (Leave, Attendance Correction, General)
+// ──────────────────────────────────────────
+
+model ServiceRequest {
+  id              String   @id @default(uuid())
+  type            String   // LEAVE, ATTENDANCE_CORRECTION, GENERAL
+  subject         String
+  message         String
+  fromUserId      String
+  fromUser        User     @relation("requestFrom", fields: [fromUserId], references: [id])
+  toUserId        String
+  toUser          User     @relation("requestTo", fields: [toUserId], references: [id])
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminRemarks    String?
+  // Leave specific
+  leaveFrom       DateTime?
+  leaveTo         DateTime?
+  leaveType       String?  // SICK, PERSONAL, OD, OTHER
+  // Attendance correction specific
+  rollNumbers     String?  // comma-separated list
+  correctionDate  DateTime?
+  periodNumbers   String?  // comma-separated e.g. "1,2,3"
+  newStatus       String?  // PRESENT, ABSENT, OD, ML
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  resolvedAt      DateTime?
+
+  @@map("service_requests")
 }

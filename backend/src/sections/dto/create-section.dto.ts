@@ -2,11 +2,13 @@ import { IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateSectionDto {
-    @ApiProperty({ example: 'CSE-A' })
-    @IsString() @IsNotEmpty()
-    name: string;
+  @ApiProperty({ example: 'CSE-A' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 
-    @ApiProperty()
-    @IsString() @IsNotEmpty()
-    departmentId: string;
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  departmentId: string;
 }

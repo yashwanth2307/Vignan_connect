@@ -67,6 +67,7 @@
      <p>Your student account has been created successfully.</p>
      <ul>
        <li><b>Email:</b> {{ $json.data.email }}</li>
+       <li><b>Password:</b> {{ $json.data.password }}</li>
        <li><b>Roll No:</b> {{ $json.data.rollNo }}</li>
        <li><b>Department:</b> {{ $json.data.department }}</li>
        <li><b>Section:</b> {{ $json.data.section }}</li>
@@ -95,6 +96,7 @@
    🎓 New Student Registered!
    Name: {{ $json.data.name }}
    Email: {{ $json.data.email }}
+   Password: {{ $json.data.password }}
    Roll No: {{ $json.data.rollNo }}
    Department: {{ $json.data.department }}
    ```
@@ -226,6 +228,7 @@
 
   Your faculty account has been created.
   Email: {{ $json.data.email }}
+  Password: {{ $json.data.password }}
   Employee ID: {{ $json.data.empId }}
   Department: {{ $json.data.department }}
 

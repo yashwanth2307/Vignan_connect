@@ -3,7 +3,7 @@ import { AnnouncementsController } from './announcements.controller';
 import { AnnouncementsService } from './announcements.service';
 
 @Module({
-    controllers: [AnnouncementsController],
-    providers: [AnnouncementsService],
+  controllers: [AnnouncementsController],
+  providers: [AnnouncementsService],
 })
-export class AnnouncementsModule { }
+export class AnnouncementsModule {}

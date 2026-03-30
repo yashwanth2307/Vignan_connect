@@ -9,19 +9,19 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 @Module({
-    imports: [
-        PassportModule.register({ defaultStrategy: 'jwt' }),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (config: ConfigService) => ({
-                secret: config.get('JWT_ACCESS_SECRET'),
-                signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRY', '15m') },
-            }),
-        }),
-    ],
-    controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
-    exports: [AuthService, JwtAuthGuard, RolesGuard],
+  imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get('JWT_ACCESS_SECRET'),
+        signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRY', '15m') },
+      }),
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard],
 })
-export class AuthModule { }
+export class AuthModule {}

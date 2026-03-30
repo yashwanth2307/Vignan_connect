@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TimetableService } from './timetable.service';
 import { CreateTimetableSlotDto } from './dto/create-timetable-slot.dto';
@@ -12,32 +22,60 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('timetable')
 export class TimetableController {
-    constructor(private service: TimetableService) { }
+  constructor(private service: TimetableService) {}
 
-    @Post()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Create timetable slot' })
-    create(@Body() dto: CreateTimetableSlotDto) { return this.service.create(dto); }
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create timetable slot' })
+  create(@Body() dto: CreateTimetableSlotDto) {
+    return this.service.create(dto);
+  }
 
-    @Get('section/:sectionId')
-    @ApiOperation({ summary: 'Get timetable by section' })
-    findBySection(@Param('sectionId') sectionId: string) { return this.service.findBySection(sectionId); }
+  @Get('section/:sectionId')
+  @ApiOperation({ summary: 'Get timetable by section' })
+  findBySection(@Param('sectionId') sectionId: string) {
+    return this.service.findBySection(sectionId);
+  }
 
-    @Get('faculty/my')
-    @Roles(UserRole.FACULTY, UserRole.HOD)
-    @ApiOperation({ summary: 'Get my timetable (faculty)' })
-    getMyTimetable(@Req() req: any) { return this.service.findByFacultyUserId(req.user.sub); }
+  @Get('faculty/my')
+  @Roles(UserRole.FACULTY, UserRole.HOD)
+  @ApiOperation({ summary: 'Get my timetable (faculty)' })
+  getMyTimetable(@Req() req: any) {
+    return this.service.findByFacultyUserId(req.user.sub);
+  }
 
-    @Get('today/section/:sectionId')
-    @ApiOperation({ summary: 'Get today timetable for section' })
-    findTodayBySection(@Param('sectionId') sectionId: string) { return this.service.findTodayBySection(sectionId); }
+  @Get('today/section/:sectionId')
+  @ApiOperation({ summary: 'Get today timetable for section' })
+  findTodayBySection(@Param('sectionId') sectionId: string) {
+    return this.service.findTodayBySection(sectionId);
+  }
 
-    @Get('today/faculty')
-    @Roles(UserRole.FACULTY, UserRole.HOD)
-    @ApiOperation({ summary: 'Get today timetable for logged-in faculty' })
-    findTodayByFaculty(@Req() req: any) { return this.service.findTodayByFacultyUserId(req.user.sub); }
+  @Get('today/faculty')
+  @Roles(UserRole.FACULTY, UserRole.HOD)
+  @ApiOperation({ summary: 'Get today timetable for logged-in faculty' })
+  findTodayByFaculty(@Req() req: any) {
+    return this.service.findTodayByFacultyUserId(req.user.sub);
+  }
 
-    @Delete(':id')
-    @Roles(UserRole.ADMIN)
-    remove(@Param('id') id: string) { return this.service.remove(id); }
+  @Post('auto-generate')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Auto-generate timetable for a section based on course offerings',
+  })
+  autoGenerate(@Body() body: { sectionId: string; semesterId: string }) {
+    return this.service.autoGenerate(body.sectionId, body.semesterId);
+  }
+
+  @Delete('section/:sectionId/clear')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Clear all timetable slots for a section' })
+  clearSection(@Param('sectionId') sectionId: string) {
+    return this.service.clearSection(sectionId);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
 }

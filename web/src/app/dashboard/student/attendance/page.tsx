@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Loader2, Printer, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -20,9 +21,31 @@ export default function StudentAttendancePage() {
 
     const summary = attendance?.summary || [];
 
+    const handlePrint = () => window.print();
+
+    const handleDownload = () => {
+        let csv = 'Subject Code,Subject Title,Attended Sessions,Total Sessions,Percentage\n';
+        summary.forEach((s: any) => {
+            csv += `"${s.subjectCode}","${s.subjectTitle}",${s.attended},${s.totalSessions},${s.percentage}%\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'My_Attendance.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="space-y-6">
-            <div><h2 className="text-2xl font-bold">My Attendance</h2><p className="text-[hsl(var(--muted-foreground))]">Subject-wise attendance overview</p></div>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+                <div><h2 className="text-2xl font-bold">My Attendance</h2><p className="text-[hsl(var(--muted-foreground))]">Subject-wise attendance overview</p></div>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handlePrint}><Printer className="w-4 h-4 mr-1" /> Print</Button>
+                    <Button variant="outline" size="sm" onClick={handleDownload}><Download className="w-4 h-4 mr-1" /> Download</Button>
+                </div>
+            </div>
 
             {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div> : (
                 <>

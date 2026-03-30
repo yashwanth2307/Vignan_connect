@@ -7,9 +7,9 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS
+  // CORS — allow all origins for dev + production
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: true,
     credentials: true,
   });
 
@@ -29,7 +29,9 @@ async function bootstrap() {
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('V-Connect 2.0 API')
-    .setDescription('Vignan Institute of Technology and Science — College ERP + LMS API')
+    .setDescription(
+      'Vignan Institute of Technology and Science — College ERP + LMS API',
+    )
     .setVersion('2.0')
     .addBearerAuth()
     .build();

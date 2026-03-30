@@ -4,9 +4,9 @@ import { SkillCoursesService } from './skill-courses.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [SkillCoursesController],
-    providers: [SkillCoursesService],
-    exports: [SkillCoursesService],
+  imports: [PrismaModule],
+  controllers: [SkillCoursesController],
+  providers: [SkillCoursesService],
+  exports: [SkillCoursesService],
 })
-export class SkillCoursesModule { }
+export class SkillCoursesModule {}

@@ -12,7 +12,8 @@ import {
     LayoutDashboard, Users, Building2, BookOpen, Calendar, ClipboardCheck,
     GraduationCap, FileText, BarChart3, LogOut,
     ChevronLeft, ChevronRight, Sun, Moon, Menu,
-    UserCircle, Layers, Award, ClipboardList, Video, Code2, Trophy, Upload, MessageCircle, Briefcase
+    UserCircle, Layers, Award, ClipboardList, Video, Code2, Trophy, Upload, MessageCircle, Briefcase,
+    CalendarDays, ArrowUpCircle, Ticket, FileSpreadsheet, Camera, Send, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getInitials } from '@/lib/utils';
@@ -34,8 +35,12 @@ const adminNav: NavItem[] = [
     { label: 'Timetable', href: '/dashboard/admin/timetable', icon: Calendar },
     { label: 'Attendance', href: '/dashboard/admin/attendance', icon: ClipboardCheck },
     { label: 'Online Classes', href: '/dashboard/admin/online-classes', icon: Video },
+    { label: 'Academic Calendar', href: '/dashboard/admin/academic-calendar', icon: CalendarDays },
+    { label: 'Semester Promotion', href: '/dashboard/admin/semester-promotion', icon: ArrowUpCircle },
     { label: 'Groups', href: '/dashboard/faculty/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
+    { label: 'Clubs', href: '/dashboard/admin/clubs', icon: Sparkles },
+    { label: 'Requests', href: '/dashboard/requests', icon: Send },
     { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
 ];
 
@@ -48,19 +53,20 @@ const hodNav: NavItem[] = [
     { label: 'Timetable', href: '/dashboard/admin/timetable', icon: Calendar },
     { label: 'Attendance', href: '/dashboard/admin/attendance', icon: ClipboardCheck },
     { label: 'Online Classes', href: '/dashboard/admin/online-classes', icon: Video },
+    { label: 'Academic Calendar', href: '/dashboard/admin/academic-calendar', icon: CalendarDays },
+    { label: 'Semester Promotion', href: '/dashboard/admin/semester-promotion', icon: ArrowUpCircle },
     { label: 'Groups', href: '/dashboard/faculty/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
+    { label: 'Clubs', href: '/dashboard/admin/clubs', icon: Sparkles },
+    { label: 'Requests', href: '/dashboard/requests', icon: Send },
+    { label: 'Marks Upload', href: '/dashboard/faculty/marks', icon: FileSpreadsheet },
     { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
 ];
 
 const examCellNav: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard/exam-cell', icon: LayoutDashboard },
-    { label: 'Exam Sessions', href: '/dashboard/exam-cell/sessions', icon: Calendar },
-    { label: 'Answer Scripts', href: '/dashboard/exam-cell/scripts', icon: FileText },
-    { label: 'Evaluation', href: '/dashboard/exam-cell/evaluation', icon: ClipboardCheck },
-    { label: 'Results', href: '/dashboard/exam-cell/results', icon: BarChart3 },
+    { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
     { label: 'Subjects', href: '/dashboard/admin/subjects', icon: BookOpen },
-    { label: 'Users', href: '/dashboard/admin/users', icon: Users },
 ];
 
 const facultyNav: NavItem[] = [
@@ -68,11 +74,15 @@ const facultyNav: NavItem[] = [
     { label: 'My Classes', href: '/dashboard/faculty/classes', icon: BookOpen },
     { label: 'Timetable', href: '/dashboard/faculty/timetable', icon: Calendar },
     { label: 'Attendance', href: '/dashboard/faculty/attendance', icon: ClipboardCheck },
+    { label: 'Marks Upload', href: '/dashboard/faculty/marks', icon: FileSpreadsheet },
     { label: 'Topics Taught', href: '/dashboard/faculty/topics', icon: ClipboardList },
     { label: 'Online Classes', href: '/dashboard/admin/online-classes', icon: Video },
+    { label: 'Academic Calendar', href: '/dashboard/admin/academic-calendar', icon: CalendarDays },
     { label: 'Groups', href: '/dashboard/faculty/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
+    { label: 'Clubs', href: '/dashboard/faculty/clubs', icon: Sparkles },
     { label: 'Evaluation', href: '/dashboard/faculty/evaluation', icon: Award },
+    { label: 'Requests', href: '/dashboard/requests', icon: Send },
 ];
 
 const studentNav: NavItem[] = [
@@ -80,11 +90,14 @@ const studentNav: NavItem[] = [
     { label: 'Timetable', href: '/dashboard/student/timetable', icon: Calendar },
     { label: 'Attendance', href: '/dashboard/student/attendance', icon: ClipboardCheck },
     { label: 'Marks', href: '/dashboard/student/marks', icon: BarChart3 },
+    { label: 'Academic Calendar', href: '/dashboard/admin/academic-calendar', icon: CalendarDays },
     { label: 'Online Classes', href: '/dashboard/admin/online-classes', icon: Video },
     { label: 'Groups', href: '/dashboard/student/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
     { label: 'Leaderboard', href: '/dashboard/code-arena/leaderboard', icon: Trophy },
-    { label: 'Profile', href: '/dashboard/student/profile', icon: UserCircle },
+    { label: 'Profile & Photo', href: '/dashboard/student/profile', icon: Camera },
+    { label: 'Clubs', href: '/dashboard/student/clubs', icon: Sparkles },
+    { label: 'Requests', href: '/dashboard/requests', icon: Send },
 ];
 
 const tpoNav: NavItem[] = [

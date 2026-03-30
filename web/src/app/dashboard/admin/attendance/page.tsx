@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Loader2, Filter, GraduationCap } from 'lucide-react';
+import { Users, Search, Loader2, Filter, GraduationCap, Printer, Download } from 'lucide-react';
 import api from '@/lib/api';
 
 export default function AdminAttendancePage() {
@@ -13,6 +13,7 @@ export default function AdminAttendancePage() {
     const [sections, setSections] = useState<any[]>([]);
     const [students, setStudents] = useState<any[]>([]);
     const [selectedDept, setSelectedDept] = useState('');
+    const [selectedSem, setSelectedSem] = useState('');
     const [selectedSection, setSelectedSection] = useState('');
     const [loading, setLoading] = useState(false);
     const [initialLoad, setInitialLoad] = useState(true);
@@ -28,22 +29,42 @@ export default function AdminAttendancePage() {
         : sections;
 
     const loadStudents = async () => {
+        if (!selectedDept || !selectedSem || !selectedSection) return;
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (selectedSection) params.append('sectionId', selectedSection);
-            if (selectedDept) params.append('departmentId', selectedDept);
+            params.append('sectionId', selectedSection);
+            params.append('departmentId', selectedDept);
+            params.append('semesterId', selectedSem);
             const data = await api.get<any[]>(`/attendance/students?${params.toString()}`);
             setStudents(data);
         } catch { setStudents([]); }
         setLoading(false);
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleDownload = () => {
+        const header = 'Roll No,Name,Section,Department\n';
+        const rows = students.map(s => `${s.rollNo},"${s.user?.name || ''}",${s.section?.name || ''},${s.department?.code || ''}`).join('\n');
+        const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Student_Registry_${selectedSection || 'All'}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     useEffect(() => {
-        if (selectedSection || selectedDept) {
+        if (selectedSection && selectedDept && selectedSem) {
             loadStudents();
+        } else {
+            setStudents([]);
         }
-    }, [selectedSection, selectedDept]);
+    }, [selectedSection, selectedDept, selectedSem]);
 
     return (
         <div className="space-y-6">
@@ -59,7 +80,7 @@ export default function AdminAttendancePage() {
                         <Filter className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                         <span className="font-medium text-sm">Filter Students</span>
                     </div>
-                    <div className="grid sm:grid-cols-3 gap-4 items-end">
+                    <div className="grid sm:grid-cols-4 gap-4 items-end">
                         <div className="space-y-1">
                             <label className="text-sm font-medium">Department</label>
                             <select
@@ -69,6 +90,17 @@ export default function AdminAttendancePage() {
                             >
                                 <option value="">All Departments</option>
                                 {departments.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Semester</label>
+                            <select
+                                className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
+                                value={selectedSem}
+                                onChange={e => setSelectedSem(e.target.value)}
+                            >
+                                <option value="">Select Semester</option>
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>Semester {s}</option>)}
                             </select>
                         </div>
                         <div className="space-y-1">
@@ -82,7 +114,11 @@ export default function AdminAttendancePage() {
                                 {filteredSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
-                        <Button onClick={loadStudents} variant="gradient">
+                        <Button 
+                            onClick={loadStudents} 
+                            variant="gradient"
+                            disabled={!selectedDept || !selectedSem || !selectedSection}
+                        >
                             <Search className="w-4 h-4 mr-1" /> Search
                         </Button>
                     </div>
@@ -94,10 +130,18 @@ export default function AdminAttendancePage() {
                 <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
             ) : students.length > 0 ? (
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-4">
                         <span className="text-sm font-medium">
                             Showing <span className="text-blue-600 font-bold">{students.length}</span> students
                         </span>
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={handlePrint}>
+                                <Printer className="w-3.5 h-3.5 mr-1" /> Print
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={handleDownload}>
+                                <Download className="w-3.5 h-3.5 mr-1" /> Download
+                            </Button>
+                        </div>
                     </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {students.map((s, i) => (
@@ -121,7 +165,7 @@ export default function AdminAttendancePage() {
                         ))}
                     </div>
                 </div>
-            ) : (selectedSection || selectedDept) ? (
+            ) : (selectedSection && selectedDept && selectedSem) ? (
                 <Card>
                     <CardContent className="py-12 text-center text-[hsl(var(--muted-foreground))]">
                         <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -134,7 +178,7 @@ export default function AdminAttendancePage() {
                     <CardContent className="py-12 text-center text-[hsl(var(--muted-foreground))]">
                         <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" />
                         <h3 className="font-semibold mb-1">Select Filters</h3>
-                        <p className="text-sm">Choose a department or section to view registered students.</p>
+                        <p className="text-sm">Choose a department, semester, and section to view registered students.</p>
                     </CardContent>
                 </Card>
             )}

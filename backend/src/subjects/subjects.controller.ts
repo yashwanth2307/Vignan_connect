@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SubjectsService } from './subjects.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -12,27 +22,45 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('subjects')
 export class SubjectsController {
-    constructor(private service: SubjectsService) { }
+  constructor(private service: SubjectsService) {}
 
-    @Post()
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Create subject' })
-    create(@Body() dto: CreateSubjectDto) { return this.service.create(dto); }
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create subject' })
+  create(@Body() dto: CreateSubjectDto) {
+    return this.service.create(dto);
+  }
 
-    @Get()
-    @ApiOperation({ summary: 'List subjects' })
-    findAll(@Query('departmentId') deptId?: string, @Query('regulationId') regId?: string) {
-        return this.service.findAll(deptId, regId);
-    }
+  @Post('bulk-upload')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Bulk upload subjects' })
+  bulkCreate(@Body() body: { subjects: any[] }) {
+    return this.service.bulkCreate(body.subjects);
+  }
 
-    @Get(':id')
-    findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @Get()
+  @ApiOperation({ summary: 'List subjects' })
+  findAll(
+    @Query('departmentId') deptId?: string,
+    @Query('regulationId') regId?: string,
+  ) {
+    return this.service.findAll(deptId, regId);
+  }
 
-    @Put(':id')
-    @Roles(UserRole.ADMIN)
-    update(@Param('id') id: string, @Body() dto: Partial<CreateSubjectDto>) { return this.service.update(id, dto); }
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
+  }
 
-    @Delete(':id')
-    @Roles(UserRole.ADMIN)
-    remove(@Param('id') id: string) { return this.service.remove(id); }
+  @Put(':id')
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() dto: Partial<CreateSubjectDto>) {
+    return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
 }

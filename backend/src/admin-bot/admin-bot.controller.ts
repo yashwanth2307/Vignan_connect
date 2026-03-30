@@ -11,19 +11,19 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('admin-bot')
 export class AdminBotController {
-    constructor(private service: AdminBotService) { }
+  constructor(private service: AdminBotService) {}
 
-    @Post('command')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Execute an AI admin command (natural language)' })
-    async executeCommand(@Body() body: { message: string }) {
-        return this.service.processCommand(body.message);
-    }
+  @Post('command')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Execute an AI admin command (natural language)' })
+  async executeCommand(@Body() body: { message: string }) {
+    return this.service.processCommand(body.message);
+  }
 
-    @Post('preview')
-    @Roles(UserRole.ADMIN)
-    @ApiOperation({ summary: 'Preview what an AI command would do (dry run)' })
-    async previewCommand(@Body() body: { message: string }) {
-        return this.service.previewCommand(body.message);
-    }
+  @Post('preview')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Preview what an AI command would do (dry run)' })
+  async previewCommand(@Body() body: { message: string }) {
+    return this.service.previewCommand(body.message);
+  }
 }

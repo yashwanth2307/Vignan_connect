@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Layers, Plus, Trash2, Loader2, X } from 'lucide-react';
+import { Layers, Plus, Trash2, Loader2, X, Pencil } from 'lucide-react';
 import api from '@/lib/api';
 
 export default function SectionsPage() {
@@ -15,6 +15,7 @@ export default function SectionsPage() {
     const [departments, setDepartments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [name, setName] = useState('');
     const [departmentId, setDepartmentId] = useState('');
     const [saving, setSaving] = useState(false);
@@ -28,7 +29,7 @@ export default function SectionsPage() {
             for (const d of depts) {
                 const detail = await api.get<any>(`/departments/${d.id}`);
                 if (detail.sections) {
-                    detail.sections.forEach((s: any) => allSections.push({ ...s, departmentName: d.name, departmentCode: d.code }));
+                    detail.sections.forEach((s: any) => allSections.push({ ...s, departmentId: d.id, departmentName: d.name, departmentCode: d.code }));
                 }
             }
             setSections(allSections);
@@ -43,13 +44,25 @@ export default function SectionsPage() {
         setSaving(true);
         setError('');
         try {
-            await api.post('/sections', { name, departmentId });
+            if (editingId) {
+                await api.put(`/sections/${editingId}`, { name, departmentId });
+            } else {
+                await api.post('/sections', { name, departmentId });
+            }
             setShowForm(false);
+            setEditingId(null);
             setName('');
             setDepartmentId('');
             await load();
         } catch (err: any) { setError(err.message); }
         setSaving(false);
+    };
+
+    const handleEdit = (sec: any) => {
+        setEditingId(sec.id);
+        setName(sec.name);
+        setDepartmentId(sec.departmentId || '');
+        setShowForm(true);
     };
 
     const handleDelete = async (id: string) => {
@@ -67,14 +80,14 @@ export default function SectionsPage() {
                     <h2 className="text-2xl font-bold">Sections</h2>
                     <p className="text-[hsl(var(--muted-foreground))]">Manage sections within departments</p>
                 </div>
-                <Button onClick={() => setShowForm(true)} variant="gradient"><Plus className="w-4 h-4" /> Add Section</Button>
+                <Button onClick={() => { setShowForm(true); setEditingId(null); setName(''); setDepartmentId(''); }} variant="gradient"><Plus className="w-4 h-4" /> Add Section</Button>
             </div>
 
             {showForm && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle>Create Section</CardTitle>
+                            <CardTitle>{editingId ? 'Edit' : 'Create'} Section</CardTitle>
                             <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="w-4 h-4" /></Button>
                         </CardHeader>
                         <CardContent>
@@ -93,7 +106,7 @@ export default function SectionsPage() {
                                 </div>
                                 <div className="flex items-end">
                                     <Button type="submit" disabled={saving}>
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId ? 'Update' : 'Create'}
                                     </Button>
                                 </div>
                             </form>
@@ -120,7 +133,10 @@ export default function SectionsPage() {
                                                 <Badge variant="secondary" className="mt-1">{sec.departmentCode || sec.departmentName}</Badge>
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(sec.id)} className="h-8 w-8 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></Button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEdit(sec)} className="h-8 w-8"><Pencil className="w-3 h-3" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(sec.id)} className="h-8 w-8 text-red-500"><Trash2 className="w-3 h-3" /></Button>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

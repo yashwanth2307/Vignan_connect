@@ -1,0 +1,57 @@
+{
+  "name": "Student Created Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "student-created",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "vconnect-student-creation"
+    },
+    {
+      "parameters": {
+        "fromEmail": "your-email@gmail.com",
+        "toEmail": "={{ $json.body.data.email }}",
+        "subject": "Welcome to V-Connect - Account Created",
+        "html": "<h2>Welcome to V-Connect!</h2>\n<p>Hello {{ $json.body.data.name }},</p>\n<p>Your student account has been created successfully.</p>\n<ul>\n<li><b>Email:</b> {{ $json.body.data.email }}</li>\n<li><b>Password:</b> {{ $json.body.data.password }}</li>\n<li><b>Roll No:</b> {{ $json.body.data.rollNo }}</li>\n<li><b>Department:</b> {{ $json.body.data.department }}</li>\n<li><b>Section:</b> {{ $json.body.data.section }}</li>\n</ul>\n<p>Login at: <a href=\"http://localhost:3000/login\">V-Connect Portal</a></p>",
+        "options": {}
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "My SMTP Credentials"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}
