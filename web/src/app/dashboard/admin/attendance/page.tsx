@@ -48,8 +48,11 @@ export default function AdminAttendancePage() {
     };
 
     const handleDownload = () => {
-        const header = 'Roll No,Name,Section,Department\n';
-        const rows = students.map(s => `${s.rollNo},"${s.user?.name || ''}",${s.section?.name || ''},${s.department?.code || ''}`).join('\n');
+        const header = 'Roll No,Name,Section,Department,Percentage,Present Count,Total Sessions\n';
+        const rows = students.map(s => {
+            const stats = s.attendanceStats || { attendancePercentage: 0, presentCount: 0, totalSessions: 0 };
+            return `${s.rollNo},"${s.user?.name || ''}",${s.section?.name || ''},${s.department?.code || ''},${stats.attendancePercentage}%,${stats.presentCount},${stats.totalSessions}`;
+        }).join('\n');
         const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -165,6 +168,16 @@ export default function AdminAttendancePage() {
                                                 <Badge variant="secondary" className="text-[10px]">{s.department?.code}</Badge>
                                             </div>
                                         </div>
+                                        {s.attendanceStats && (
+                                            <div className="text-right shrink-0 flex flex-col items-end justify-center">
+                                                <span className={`text-lg font-bold ${s.attendanceStats.attendancePercentage >= 75 ? 'text-green-500' : s.attendanceStats.attendancePercentage >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                                                    {s.attendanceStats.attendancePercentage}%
+                                                </span>
+                                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-medium">
+                                                    {s.attendanceStats.presentCount}/{s.attendanceStats.totalSessions} Sessions
+                                                </span>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </motion.div>

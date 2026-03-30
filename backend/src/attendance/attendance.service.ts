@@ -27,11 +27,38 @@ export class AttendanceService {
         user: { select: { id: true, name: true, email: true } },
         section: { select: { id: true, name: true } },
         department: { select: { id: true, name: true, code: true } },
+        attendanceRecords: {
+          include: {
+            attendanceSession: true,
+          },
+        },
       },
       orderBy: { rollNo: 'asc' },
     });
 
-    return students;
+    // Calculate attendance percentage for each student
+    return students.map((student) => {
+      // We could optionally filter sessions by the requested semesterId
+      // Here we just look at all records the student has historically
+      const records = student.attendanceRecords;
+      const totalSessions = records.length;
+      const presentCount = records.filter((r) => r.status === 'PRESENT').length;
+
+      const attendancePercentage =
+        totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+
+      // Remove the raw records from the payload so we don't send mega-data,
+      // but append our calculated values.
+      const { attendanceRecords, ...rest } = student;
+      return {
+        ...rest,
+        attendanceStats: {
+          totalSessions,
+          presentCount,
+          attendancePercentage,
+        },
+      };
+    });
   }
 
   // ── Faculty: Start Attendance Session (Manual, no QR) ──
