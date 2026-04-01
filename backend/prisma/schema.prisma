@@ -106,6 +106,8 @@ model User {
   passwordHash String
   role         UserRole @default(STUDENT)
   isActive     Boolean  @default(true)
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

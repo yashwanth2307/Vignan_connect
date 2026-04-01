@@ -177,6 +177,54 @@ export class AuthService {
     await this.redis.del(`refresh:${userId}`);
   }
 
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) return; // Silent return for security
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60000); // 15 mins
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { resetPasswordToken: otp, resetPasswordExpires: expires },
+    });
+
+    const { sendEmail } = await import('../utils/mailer');
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>V-Connect Password Reset</h2>
+        <p>You requested a password reset. Here is your 6-digit OTP:</p>
+        <h1 style="color: #2563eb; letter-spacing: 5px;">${otp}</h1>
+        <p>This code will expire in 15 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+    await sendEmail(email, 'V-Connect Password Reset Code', html);
+  }
+
+  async resetPassword(email: string, token: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new ConflictException('Invalid reset token or email');
+    if (user.resetPasswordToken !== token) {
+      throw new ConflictException('Invalid reset token');
+    }
+    if (user.resetPasswordExpires && user.resetPasswordExpires < new Date()) {
+      throw new ConflictException('Reset token has expired');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: newHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    await this.redis.del(`refresh:${user.id}`);
+  }
+
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
   }

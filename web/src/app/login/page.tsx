@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { GraduationCap, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GraduationCap, Eye, EyeOff, Loader2, ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import Image from 'next/image';
+import api from '@/lib/api';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -18,6 +19,13 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState(1);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [otp, setOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [forgotLoading, setForgotLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +37,34 @@ export default function LoginPage() {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSendOtp = async () => {
+        try {
+            setForgotLoading(true);
+            await api.post('/auth/forgot-password', { email: forgotEmail });
+            setForgotStep(2);
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : 'Failed to send OTP');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        try {
+            setForgotLoading(true);
+            await api.post('/auth/reset-password', { email: forgotEmail, token: otp, newPassword });
+            alert('Password reset successfully! Please login with your new password.');
+            setShowForgotModal(false);
+            setForgotStep(1);
+            setOtp('');
+            setNewPassword('');
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : 'Failed to reset password');
+        } finally {
+            setForgotLoading(false);
         }
     };
 
@@ -137,7 +173,16 @@ export default function LoginPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="password">Password</Label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowForgotModal(true)}
+                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            Forgot password?
+                                        </button>
+                                    </div>
                                     <div className="relative">
                                         <Input
                                             id="password"
@@ -145,7 +190,7 @@ export default function LoginPage() {
                                             placeholder="Enter your password"
                                             value={password}
                                             onChange={e => setPassword(e.target.value)}
-                                            required
+                                            required={!showForgotModal}
                                         />
                                         <button
                                             type="button"
@@ -163,6 +208,67 @@ export default function LoginPage() {
                             </form>
                         </CardContent>
                     </Card>
+
+                    {/* Forgot Password Modal */}
+                    <AnimatePresence>
+                        {showForgotModal && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.95, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl w-full max-w-md p-6 shadow-2xl"
+                                >
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-xl font-bold">Reset Password</h3>
+                                        <button onClick={() => { setShowForgotModal(false); setForgotStep(1); }} className="p-1 rounded-full hover:bg-[hsl(var(--accent))]">
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    {forgotStep === 1 && (
+                                        <div className="space-y-4">
+                                            <p className="text-sm text-[hsl(var(--muted-foreground))]">Enter your registered email address and we will send you a 6-digit OTP securely via Gmail.</p>
+                                            <Input
+                                                type="email"
+                                                placeholder="Email Address"
+                                                value={forgotEmail}
+                                                onChange={e => setForgotEmail(e.target.value)}
+                                            />
+                                            <Button className="w-full" disabled={forgotLoading} onClick={handleSendOtp}>
+                                                {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send OTP'}
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {forgotStep === 2 && (
+                                        <div className="space-y-4">
+                                            <p className="text-sm text-[hsl(var(--muted-foreground))]">Enter the 6-digit OTP sent to your email, along with your new password.</p>
+                                            <Input
+                                                placeholder="6-Digit OTP"
+                                                value={otp}
+                                                maxLength={6}
+                                                onChange={e => setOtp(e.target.value)}
+                                            />
+                                            <Input
+                                                type="password"
+                                                placeholder="New Password"
+                                                value={newPassword}
+                                                onChange={e => setNewPassword(e.target.value)}
+                                            />
+                                            <Button className="w-full" disabled={forgotLoading} onClick={handleResetPassword}>
+                                                {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reset Password'}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </motion.div>
         </div>

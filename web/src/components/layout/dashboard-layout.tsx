@@ -10,13 +10,16 @@ import { useAuth, UserRole } from '@/contexts/auth-context';
 import { useTheme } from 'next-themes';
 import {
     LayoutDashboard, Users, Building2, BookOpen, Calendar, ClipboardCheck,
-    GraduationCap, FileText, BarChart3, LogOut,
+    GraduationCap, FileText, BarChart3, LogOut, Key, X, Loader2,
     ChevronLeft, ChevronRight, Sun, Moon, Menu,
     UserCircle, Layers, Award, ClipboardList, Video, Code2, Trophy, Upload, MessageCircle, Briefcase,
     CalendarDays, ArrowUpCircle, Ticket, FileSpreadsheet, Camera, Send, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getInitials } from '@/lib/utils';
+import api from '@/lib/api';
 
 interface NavItem {
     label: string;
@@ -127,6 +130,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
 
+    const [showChangePassword, setShowChangePassword] = useState(false);
+    const [passForm, setPassForm] = useState({ currentPassword: '', newPassword: '' });
+    const [passLoading, setPassLoading] = useState(false);
+
+    const handleChangePassword = async () => {
+        try {
+            setPassLoading(true);
+            await api.post('/auth/change-password', passForm);
+            alert('Password changed successfully! You will be logged out dynamically to re-authenticate.');
+            setShowChangePassword(false);
+            setTimeout(() => logout(), 500);
+        } catch (err: any) {
+            alert(err.message || 'Failed to change password');
+        } finally {
+            setPassLoading(false);
+        }
+    };
+
     if (!user) return null;
 
     const navItems = getNavItems(user.role);
@@ -135,8 +156,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="p-4 flex items-center gap-3 border-b border-[hsl(var(--border)/0.5)]">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-                    <span className="text-white font-black text-xl tracking-tighter">V</span>
+                <div className="w-10 h-10 rounded-full shadow-sm flex items-center justify-center overflow-hidden shrink-0 bg-white">
+                    <img src="/images/logo.png" alt="Vignan Logo" className="w-9 h-9 object-contain" />
                 </div>
                 <AnimatePresence>
                     {!collapsed && (
@@ -213,6 +234,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                         </div>
                     )}
                 </div>
+                <button
+                    onClick={() => setShowChangePassword(true)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] w-full transition-all"
+                >
+                    <Key className="w-5 h-5" />
+                    {!collapsed && <span>Change Password</span>}
+                </button>
                 <button
                     onClick={logout}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 w-full transition-all"
@@ -302,6 +330,57 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     </motion.div>
                 </main>
             </div>
+
+            {/* Change Password Modal */}
+            <AnimatePresence>
+                {showChangePassword && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold">Change Password</h3>
+                                <button onClick={() => setShowChangePassword(false)} className="p-1 rounded-full hover:bg-[hsl(var(--accent))]">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                <p className="text-sm text-[hsl(var(--muted-foreground))]">Create a strong, new password below.</p>
+                                <div className="space-y-1">
+                                    <Label>Current Password</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="Current Password"
+                                        value={passForm.currentPassword}
+                                        onChange={e => setPassForm({ ...passForm, currentPassword: e.target.value })}
+                                        disabled={passLoading}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label>New Password</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="New Password"
+                                        value={passForm.newPassword}
+                                        onChange={e => setPassForm({ ...passForm, newPassword: e.target.value })}
+                                        disabled={passLoading}
+                                    />
+                                </div>
+                                <Button className="w-full" disabled={passLoading} onClick={handleChangePassword}>
+                                    {passLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update Password'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

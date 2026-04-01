@@ -52,6 +52,22 @@ export class AuthController {
     return this.authService.getMe(req.user.sub);
   }
 
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send a password reset email to the user' })
+  async forgotPassword(@Body() dto: { email: string }) {
+    await this.authService.forgotPassword(dto.email);
+    return { message: 'If an account exists with that email, a reset code has been sent.' };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset the password using the OTP from email' })
+  async resetPassword(@Body() dto: { email: string; token: string; newPassword: string }) {
+    await this.authService.resetPassword(dto.email, dto.token, dto.newPassword);
+    return { message: 'Password has been successfully reset. Please log in.' };
+  }
+
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)

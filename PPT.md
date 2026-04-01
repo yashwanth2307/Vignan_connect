@@ -91,8 +91,23 @@ V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes core i
 
 ---
 
-## SLIDE 5: TECHNOLOGIES USED
+## SLIDE 5: SYSTEM REQUIREMENTS & TECHNOLOGIES
 
+### Hardware Requirements:
+- **Processor:** Intel Core i3 (or equivalent) and above
+- **RAM:** Minimum 4 GB (8 GB recommended for smooth running of backend & frontend servers locally)
+- **Storage:** 20 GB free disk space
+- **Network:** Active internet connection (minimum 2 Mbps for seamless online classroom integration)
+
+### Software Requirements:
+- **Operating System:** Windows 10/11, macOS, or Linux
+- **Web Browser:** Google Chrome, Mozilla Firefox, Safari, or Microsoft Edge (latest versions)
+- **Runtime Environment:** Node.js (v18 or higher)
+- **Package Manager:** npm or yarn
+- **Database:** PostgreSQL (Cloud/Local)
+- **Tools Supported:** VS Code, Git
+
+### Technology Stack:
 | Category | Technology |
 |----------|-----------|
 | **Frontend** | Next.js 16, React 19, TypeScript |

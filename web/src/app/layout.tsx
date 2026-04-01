@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: "V-Connect | Vignan Institute of Technology and Science",
   description: "College ERP, LMS & Attendance System for Vignan Institute of Technology and Science",
   keywords: ["ERP", "LMS", "Attendance", "Vignan", "College"],
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
