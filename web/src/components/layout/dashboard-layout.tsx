@@ -43,6 +43,8 @@ const adminNav: NavItem[] = [
     { label: 'Groups', href: '/dashboard/faculty/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
     { label: 'Clubs', href: '/dashboard/admin/clubs', icon: Sparkles },
+    { label: 'Magazine', href: '/dashboard/admin/magazine', icon: FileText },
+    { label: 'Gallery', href: '/dashboard/admin/gallery', icon: Camera },
     { label: 'Requests', href: '/dashboard/requests', icon: Send },
     { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
 ];
@@ -84,6 +86,8 @@ const facultyNav: NavItem[] = [
     { label: 'Groups', href: '/dashboard/faculty/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
     { label: 'Clubs', href: '/dashboard/faculty/clubs', icon: Sparkles },
+    { label: 'Magazine', href: '/dashboard/admin/magazine', icon: FileText },
+    { label: 'Gallery', href: '/dashboard/admin/gallery', icon: Camera },
     { label: 'Evaluation', href: '/dashboard/faculty/evaluation', icon: Award },
     { label: 'Requests', href: '/dashboard/requests', icon: Send },
 ];

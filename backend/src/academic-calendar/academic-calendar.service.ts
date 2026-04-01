@@ -14,6 +14,7 @@ export class AcademicCalendarService {
     semester?: number;
     departmentId?: string;
     description?: string;
+    posterUrl?: string;
     createdById?: string;
   }) {
     return this.prisma.academicCalendar.create({
@@ -26,6 +27,7 @@ export class AcademicCalendarService {
         semester: data.semester,
         departmentId: data.departmentId,
         description: data.description,
+        posterUrl: data.posterUrl,
         createdById: data.createdById,
       },
     });

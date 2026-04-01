@@ -99,17 +99,17 @@ enum ContestStatus {
 // ──────────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  phone        String?
-  passwordHash String
-  role         UserRole @default(STUDENT)
-  isActive     Boolean  @default(true)
-  resetPasswordToken String?
+  id                   String    @id @default(uuid())
+  name                 String
+  email                String    @unique
+  phone                String?
+  passwordHash         String
+  role                 UserRole  @default(STUDENT)
+  isActive             Boolean   @default(true)
+  resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   // Relations
   student             Student?
@@ -117,15 +117,17 @@ model User {
   auditLogs           AuditLog[]
   createdMaterials    Material[]
   createdAssignments  Assignment[]
-  createdEvents       Event[]            @relation("EventCreator")
+  createdEvents       Event[]           @relation("EventCreator")
   announcements       Announcement[]
   placementDrives     PlacementDrive[]
-  onlineClasses       OnlineClass[]      @relation("OnlineClassCreator")
+  onlineClasses       OnlineClass[]     @relation("OnlineClassCreator")
   createdSkillCourses SkillCourse[]
   groupMessages       GroupMessage[]
-  clubsCoordinated    Club[]             @relation("ClubCoordinator")
-  requestsSent        ServiceRequest[]   @relation("requestFrom")
-  requestsReceived    ServiceRequest[]   @relation("requestTo")
+  clubsCoordinated    Club[]            @relation("ClubCoordinator")
+  requestsSent        ServiceRequest[]  @relation("requestFrom")
+  requestsReceived    ServiceRequest[]  @relation("requestTo")
+  magazines           CollegeMagazine[]
+  galleryPhotos       CollegeGallery[]
 
   @@map("users")
 }
@@ -211,56 +213,56 @@ model Semester {
 // ──────────────────────────────────────────
 
 model Student {
-  id             String     @id @default(uuid())
-  userId         String     @unique
-  user           User       @relation(fields: [userId], references: [id])
-  rollNo         String     @unique
-  sectionId      String
-  section        Section    @relation(fields: [sectionId], references: [id])
-  departmentId   String
-  department     Department @relation(fields: [departmentId], references: [id])
-  regulationId   String
-  regulation     Regulation @relation(fields: [regulationId], references: [id])
-  batchStartYear Int
-  batchEndYear   Int
-  currentYear    Int        @default(1)   // 1-4
-  currentSemester Int       @default(1)   // 1-8
-  photoUrl       String?
-  gender         String?                  // Male|Female|Other
-  dob            DateTime?
-  bloodGroup     String?
-  aadharNumber   String?
-  admissionType  String     @default("REGULAR")  // REGULAR|LATERAL
-  category       String?                  // OC|BC|SC|ST|EWS
-  religion       String?
-  nationality    String     @default("Indian")
+  id              String     @id @default(uuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id])
+  rollNo          String     @unique
+  sectionId       String
+  section         Section    @relation(fields: [sectionId], references: [id])
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id])
+  regulationId    String
+  regulation      Regulation @relation(fields: [regulationId], references: [id])
+  batchStartYear  Int
+  batchEndYear    Int
+  currentYear     Int        @default(1) // 1-4
+  currentSemester Int        @default(1) // 1-8
+  photoUrl        String?
+  gender          String? // Male|Female|Other
+  dob             DateTime?
+  bloodGroup      String?
+  aadharNumber    String?
+  admissionType   String     @default("REGULAR") // REGULAR|LATERAL
+  category        String? // OC|BC|SC|ST|EWS
+  religion        String?
+  nationality     String     @default("Indian")
 
   // Student's own contact
-  studentPhone   String?
+  studentPhone String?
 
   // Father Details
-  fatherName        String?
-  fatherPhone       String?
-  fatherOccupation  String?
-  fatherEmail       String?
+  fatherName       String?
+  fatherPhone      String?
+  fatherOccupation String?
+  fatherEmail      String?
 
   // Mother Details
-  motherName        String?
-  motherPhone       String?
-  motherOccupation  String?
-  motherEmail       String?
+  motherName       String?
+  motherPhone      String?
+  motherOccupation String?
+  motherEmail      String?
 
   // Guardian (optional)
-  guardianName      String?
-  guardianPhone     String?
-  guardianRelation  String?
+  guardianName     String?
+  guardianPhone    String?
+  guardianRelation String?
 
   // Address
-  presentAddress    String?
-  permanentAddress  String?
-  city              String?
-  state             String?
-  pincode           String?
+  presentAddress   String?
+  permanentAddress String?
+  city             String?
+  state            String?
+  pincode          String?
 
   attendanceRecords     AttendanceRecord[]
   submissions           Submission[]
@@ -318,7 +320,7 @@ model Subject {
   title          String
   credits        Int
   semesterNumber Int
-  weeklyHours    Int        @default(3)   // periods per week (for timetable)
+  weeklyHours    Int        @default(3) // periods per week (for timetable)
   subjectType    String     @default("THEORY") // THEORY|LAB|PROJECT|SEMINAR
   isLab          Boolean    @default(false)
   isElective     Boolean    @default(false)
@@ -389,8 +391,8 @@ model TimetableSlot {
 
 model AttendanceSession {
   id               String         @id @default(uuid())
-  courseOfferingId  String
-  courseOffering    CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
   date             DateTime
   hourIndex        Int
   status           SessionStatus  @default(ACTIVE)
@@ -731,21 +733,21 @@ model PlacementApplication {
 // ──────────────────────────────────────────
 
 model OnlineClass {
-  id               String         @id @default(uuid())
-  courseOfferingId  String?
-  courseOffering    CourseOffering? @relation(fields: [courseOfferingId], references: [id])
+  id               String          @id @default(uuid())
+  courseOfferingId String?
+  courseOffering   CourseOffering? @relation(fields: [courseOfferingId], references: [id])
   title            String
   description      String?
   meetingLink      String?
   roomName         String?
-  platform         String         @default("Google Meet") // Google Meet, Zoom, Teams, etc.
+  platform         String          @default("Google Meet") // Google Meet, Zoom, Teams, etc.
   scheduledAt      DateTime
-  durationMinutes  Int            @default(60)
-  status           String         @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED, CANCELLED
+  durationMinutes  Int             @default(60)
+  status           String          @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED, CANCELLED
   createdById      String
-  createdBy        User           @relation("OnlineClassCreator", fields: [createdById], references: [id])
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdBy        User            @relation("OnlineClassCreator", fields: [createdById], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@map("online_classes")
 }
@@ -922,14 +924,14 @@ model SkillEnrollment {
 // ──────────────────────────────────────────
 
 model Group {
-  id               String            @id @default(uuid())
+  id               String          @id @default(uuid())
   name             String
   description      String?
   facultyId        String
-  faculty          Faculty           @relation(fields: [facultyId], references: [id])
-  courseOfferingId  String?
-  courseOffering    CourseOffering?   @relation(fields: [courseOfferingId], references: [id])
-  isActive         Boolean           @default(true)
+  faculty          Faculty         @relation(fields: [facultyId], references: [id])
+  courseOfferingId String?
+  courseOffering   CourseOffering? @relation(fields: [courseOfferingId], references: [id])
+  isActive         Boolean         @default(true)
 
   members     GroupMember[]
   messages    GroupMessage[]
@@ -967,13 +969,13 @@ model GroupMessage {
 }
 
 model GroupAssignment {
-  id          String             @id @default(uuid())
+  id          String   @id @default(uuid())
   groupId     String
-  group       Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   title       String
   description String
   dueAt       DateTime
-  maxPoints   Int                @default(10)
+  maxPoints   Int      @default(10)
 
   submissions GroupSubmission[]
 
@@ -989,11 +991,11 @@ model GroupSubmission {
   assignment      GroupAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   studentId       String
   student         Student         @relation(fields: [studentId], references: [id])
-  content         String          // Text content of submission
-  fileUrl         String?         // Optional file attachment
+  content         String // Text content of submission
+  fileUrl         String? // Optional file attachment
   status          String          @default("SUBMITTED") // SUBMITTED, REVIEWED, FLAGGED, VERIFIED
-  similarityScore Float?          // 0-100 plagiarism percentage
-  similarToId     String?         // ID of most-similar submission
+  similarityScore Float? // 0-100 plagiarism percentage
+  similarToId     String? // ID of most-similar submission
   vPointsAwarded  Int             @default(0)
   facultyRemarks  String?
   reviewedAt      DateTime?
@@ -1011,18 +1013,18 @@ model GroupSubmission {
 // ──────────────────────────────────────────
 
 model Club {
-  id            String       @id @default(uuid())
-  name          String       @unique
+  id            String  @id @default(uuid())
+  name          String  @unique
   description   String?
-  category      String       @default("Technical") // Technical, Cultural, Sports, Social, Literary
+  category      String  @default("Technical") // Technical, Cultural, Sports, Social, Literary
   logoUrl       String?
   coverUrl      String?
   coordinatorId String
-  coordinator   User         @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
-  isActive      Boolean      @default(true)
+  coordinator   User    @relation("ClubCoordinator", fields: [coordinatorId], references: [id])
+  isActive      Boolean @default(true)
 
-  members  ClubMember[]
-  events   ClubEvent[]
+  members ClubMember[]
+  events  ClubEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1065,19 +1067,20 @@ model ClubEvent {
 // ──────────────────────────────────────────
 
 model AcademicCalendar {
-  id           String   @id @default(uuid())
-  title        String                     // "Sankranti Holiday"
-  eventType    String                     // HOLIDAY|EXAM|SEMESTER_START|SEMESTER_END|INTERNAL_EXAM|WORKING_SATURDAY|SPECIAL_EVENT|RESULT_DATE
+  id           String    @id @default(uuid())
+  title        String // "Sankranti Holiday"
+  eventType    String // HOLIDAY|EXAM|SEMESTER_START|SEMESTER_END|INTERNAL_EXAM|WORKING_SATURDAY|SPECIAL_EVENT|RESULT_DATE
   startDate    DateTime
   endDate      DateTime?
-  academicYear String                     // "2024-25"
-  semester     Int?                       // null = applies to all semesters
-  departmentId String?                    // null = college-wide
+  academicYear String // "2024-25"
+  semester     Int? // null = applies to all semesters
+  departmentId String? // null = college-wide
   description  String?
-  isPublished  Boolean  @default(false)
+  posterUrl    String?
+  isPublished  Boolean   @default(false)
   createdById  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([academicYear])
   @@index([startDate])
@@ -1089,22 +1092,22 @@ model AcademicCalendar {
 // ──────────────────────────────────────────
 
 model SemesterPromotion {
-  id              String   @id @default(uuid())
-  batchStartYear  Int
-  batchEndYear    Int
-  departmentId    String
-  fromSemester    Int
-  toSemester      Int
-  fromYear        Int
-  toYear          Int
-  academicYear    String
-  promotedCount   Int      @default(0)
-  promotedById    String?
-  notes           String?
-  promotedAt      DateTime @default(now())
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  batchStartYear Int
+  batchEndYear   Int
+  departmentId   String
+  fromSemester   Int
+  toSemester     Int
+  fromYear       Int
+  toYear         Int
+  academicYear   String
+  promotedCount  Int      @default(0)
+  promotedById   String?
+  notes          String?
+  promotedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
 
-  records         SemesterPromotionRecord[]
+  records SemesterPromotionRecord[]
 
   @@index([departmentId])
   @@index([batchStartYear, batchEndYear])
@@ -1112,17 +1115,17 @@ model SemesterPromotion {
 }
 
 model SemesterPromotionRecord {
-  id           String   @id @default(uuid())
+  id           String            @id @default(uuid())
   promotionId  String
   promotion    SemesterPromotion @relation(fields: [promotionId], references: [id])
   studentId    String
-  student      Student  @relation(fields: [studentId], references: [id])
+  student      Student           @relation(fields: [studentId], references: [id])
   fromSemester Int
   toSemester   Int
   fromYear     Int
   toYear       Int
   newSectionId String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime          @default(now())
 
   @@unique([promotionId, studentId])
   @@map("semester_promotion_records")
@@ -1133,28 +1136,61 @@ model SemesterPromotionRecord {
 // ──────────────────────────────────────────
 
 model ServiceRequest {
-  id              String   @id @default(uuid())
-  type            String   // LEAVE, ATTENDANCE_CORRECTION, GENERAL
-  subject         String
-  message         String
-  fromUserId      String
-  fromUser        User     @relation("requestFrom", fields: [fromUserId], references: [id])
-  toUserId        String
-  toUser          User     @relation("requestTo", fields: [toUserId], references: [id])
-  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  adminRemarks    String?
+  id             String    @id @default(uuid())
+  type           String // LEAVE, ATTENDANCE_CORRECTION, GENERAL
+  subject        String
+  message        String
+  fromUserId     String
+  fromUser       User      @relation("requestFrom", fields: [fromUserId], references: [id])
+  toUserId       String
+  toUser         User      @relation("requestTo", fields: [toUserId], references: [id])
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminRemarks   String?
   // Leave specific
-  leaveFrom       DateTime?
-  leaveTo         DateTime?
-  leaveType       String?  // SICK, PERSONAL, OD, OTHER
+  leaveFrom      DateTime?
+  leaveTo        DateTime?
+  leaveType      String? // SICK, PERSONAL, OD, OTHER
   // Attendance correction specific
-  rollNumbers     String?  // comma-separated list
-  correctionDate  DateTime?
-  periodNumbers   String?  // comma-separated e.g. "1,2,3"
-  newStatus       String?  // PRESENT, ABSENT, OD, ML
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  resolvedAt      DateTime?
+  rollNumbers    String? // comma-separated list
+  correctionDate DateTime?
+  periodNumbers  String? // comma-separated e.g. "1,2,3"
+  newStatus      String? // PRESENT, ABSENT, OD, ML
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  resolvedAt     DateTime?
 
   @@map("service_requests")
+}
+
+// ──────────────────────────────────────────
+// MEDIA & PUBLICATIONS (HOME PAGE)
+// ──────────────────────────────────────────
+
+model CollegeMagazine {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  fileUrl      String // Link to PDF or Image
+  thumbnailUrl String?
+  isPublished  Boolean  @default(true)
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("college_magazines")
+}
+
+model CollegeGallery {
+  id          String   @id @default(uuid())
+  title       String?
+  imageUrl    String
+  category    String   @default("General") // e.g., Sports, Tech Fest, Infrastructure
+  isPublished Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("college_gallery")
 }

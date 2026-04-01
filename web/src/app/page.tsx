@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,9 @@ import Image from 'next/image';
 import {
   Building2, Users, ArrowRight,
   Award, GraduationCap, MapPin, Phone, Mail, Globe,
-  Layers, Star
+  Layers, Star, Download, Sparkles, BookOpen as BookIcon, Calendar, Camera
 } from 'lucide-react';
+import api from '@/lib/api';
 
 const departments = [
   { name: 'Computer Science & Engineering', code: 'CSE', students: '480+', sections: 4, color: 'from-blue-500 to-blue-600' },
@@ -28,6 +29,15 @@ const leadership = [
 ];
 
 export default function LandingPage() {
+  const [magazines, setMagazines] = useState<any[]>([]);
+  const [gallery, setGallery] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Optionally fetch public data
+    api.get('/college-magazines').then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
+    api.get('/college-gallery').then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))]">
       {/* Nav */}
@@ -260,42 +270,87 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Campus Gallery */}
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="/images/campus1.jpg" alt="Campus" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-950/95 to-purple-950/90" />
-        </div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* Magazines & Gallery Section */}
+      <section className="py-24 bg-white dark:bg-gray-900 border-y border-[hsl(var(--border))]">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+              Campus Life & Publications
+            </h2>
+            <p className="text-[hsl(var(--muted-foreground))] mt-4 max-w-2xl mx-auto">Explore recent happenings and download our latest college magazines.</p>
+          </motion.div>
+          
+          <div className="grid lg:grid-cols-2 gap-16">
+            {/* Gallery Column */}
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">Our Campus</h2>
-              <p className="text-blue-100/80 text-lg mb-8 leading-relaxed">
-                Vignan Institute of Technology and Science (VGNT), Deshmukhi is spread across a sprawling campus with
-                world-class infrastructure, smart classrooms, state-of-the-art laboratories, and a vibrant
-                campus life that fosters academic excellence and holistic development.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Smart Classrooms', value: '100+' },
-                  { label: 'Labs', value: '50+' },
-                  { label: 'Library Books', value: '50K+' },
-                  { label: 'Acre Campus', value: '25+' },
-                ].map((item) => (
-                  <div key={item.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                    <p className="text-2xl font-bold text-white">{item.value}</p>
-                    <p className="text-blue-200/70 text-sm">{item.label}</p>
-                  </div>
-                ))}
+              <div className="flex items-center gap-3 mb-8 border-b pb-4">
+                <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                  <Star className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold">Dynamic Gallery</h3>
               </div>
+              {gallery.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {gallery.slice(0, 6).map((img, i) => (
+                    <motion.div key={img.id} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all aspect-square border-2 border-transparent hover:border-orange-200">
+                      <img src={img.imageUrl} alt={img.title || 'Gallery'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <div>
+                           <p className="text-white font-semibold text-sm line-clamp-1">{img.title || 'Campus Selection'}</p>
+                           <p className="text-white/70 text-[10px]">{img.category}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-64 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">
+                  <Camera className="w-10 h-10 opacity-50 mb-3" />
+                  <p className="text-sm">Gallery is currently being updated...</p>
+                </div>
+              )}
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl">
-                <img src="/images/campus2.jpg" alt="Campus Aerial" className="w-full h-48 object-cover hover:scale-110 transition-transform duration-500" />
+
+            {/* Magazines Column */}
+            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <div className="flex items-center gap-3 mb-8 border-b pb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                  <BookIcon className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold">College Magazines</h3>
               </div>
-              <div className="rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl mt-8">
-                <img src="/images/campus1.jpg" alt="Campus Front" className="w-full h-48 object-cover hover:scale-110 transition-transform duration-500" />
-              </div>
+              {magazines.length > 0 ? (
+                <div className="space-y-4">
+                  {magazines.slice(0, 4).map((mag, i) => (
+                    <motion.div key={mag.id} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex gap-4 border shadow-sm hover:shadow-md transition-shadow group">
+                      <div className="w-20 h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100 border relative">
+                        {mag.thumbnailUrl ? (
+                          <img src={mag.thumbnailUrl} alt={mag.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <BookIcon className="w-8 h-8 opacity-20" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <h4 className="font-bold text-lg mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">{mag.title}</h4>
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 leading-snug">{mag.description || 'Vignan\'s official newsletter featuring achievements, events, and campus life.'}</p>
+                        <Button variant="outline" size="sm" asChild className="w-fit">
+                          <a href={mag.fileUrl} target="_blank" rel="noreferrer">
+                            <Download className="w-4 h-4 mr-2" /> Read Issue
+                          </a>
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-64 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">
+                  <Calendar className="w-10 h-10 opacity-50 mb-3" />
+                  <p className="text-sm">Magazines will be available soon...</p>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

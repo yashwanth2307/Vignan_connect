@@ -40,6 +40,7 @@ export default function AcademicCalendarPage() {
     const [academicYear, setAcademicYear] = useState('2024-25');
     const [semester, setSemester] = useState('');
     const [description, setDescription] = useState('');
+    const [posterUrl, setPosterUrl] = useState('');
 
     const loadEvents = async () => {
         try {
@@ -58,10 +59,11 @@ export default function AcademicCalendarPage() {
             await api.post('/academic-calendar', {
                 title, eventType, startDate, endDate: endDate || undefined,
                 academicYear, semester: semester ? parseInt(semester) : undefined,
-                description: description || undefined
+                description: description || undefined,
+                posterUrl: posterUrl || undefined
             });
             setTitle(''); setStartDate(''); setEndDate(''); setDescription('');
-            setSemester(''); setShowForm(false);
+            setSemester(''); setPosterUrl(''); setShowForm(false);
             loadEvents();
         } catch (e: any) { alert(e.message); }
         setSaving(false);
@@ -143,12 +145,18 @@ export default function AcademicCalendarPage() {
                                             {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Semester {s}</option>)}
                                         </select>
                                     </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Description</label>
-                                    <textarea value={description} onChange={e => setDescription(e.target.value)}
-                                        className="flex w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm min-h-[60px]"
-                                        placeholder="Optional description..." />
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium">Description</label>
+                                        <textarea value={description} onChange={e => setDescription(e.target.value)}
+                                            className="flex w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm min-h-[60px]"
+                                            placeholder="Optional description..." />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium">Poster / Image URL (Optional)</label>
+                                        <input value={posterUrl} onChange={e => setPosterUrl(e.target.value)}
+                                            className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
+                                            placeholder="https://example.com/poster.jpg" />
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="gradient" onClick={handleCreate} disabled={saving || !title || !startDate}>
@@ -200,6 +208,11 @@ export default function AcademicCalendarPage() {
                                             </p>
                                             {event.description && <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">{event.description}</p>}
                                         </div>
+                                        {event.posterUrl && (
+                                            <div className="shrink-0">
+                                                <img src={event.posterUrl} alt="Poster" className="w-16 h-16 object-cover rounded-xl border" />
+                                            </div>
+                                        )}
                                         <div className="flex gap-1 shrink-0">
                                             <Button size="sm" variant="outline" onClick={() => togglePublish(event.id)}
                                                 className="text-xs">

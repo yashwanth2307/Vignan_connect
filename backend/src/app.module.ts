@@ -25,6 +25,8 @@ import { AcademicCalendarModule } from './academic-calendar/academic-calendar.mo
 import { SemesterPromotionModule } from './semester-promotion/semester-promotion.module';
 import { RequestsModule } from './requests/requests.module';
 import { ClubsModule } from './clubs/clubs.module';
+import { CollegeMagazineModule } from './college-magazine/college-magazine.module';
+import { CollegeGalleryModule } from './college-gallery/college-gallery.module';
 
 @Module({
   imports: [
@@ -54,6 +56,8 @@ import { ClubsModule } from './clubs/clubs.module';
     SemesterPromotionModule,
     RequestsModule,
     ClubsModule,
+    CollegeMagazineModule,
+    CollegeGalleryModule,
   ],
 })
 export class AppModule {}
