@@ -85,7 +85,10 @@ export class OnlineClassesService {
 
     return this.prisma.onlineClass.findMany({
       where: {
-        courseOffering: { sectionId: student.sectionId },
+        OR: [
+          { courseOfferingId: null },
+          { courseOffering: { sectionId: student.sectionId } }
+        ],
         scheduledAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // include last 24h
       },
       orderBy: { scheduledAt: 'asc' },

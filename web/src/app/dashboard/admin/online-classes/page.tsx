@@ -55,15 +55,23 @@ export default function OnlineClassesPage() {
 
     const canCreate = user && ['ADMIN', 'FACULTY', 'HOD'].includes(user.role);
 
+    const [offerings, setOfferings] = useState<any[]>([]);
+    const [courseOfferingId, setCourseOfferingId] = useState('');
+
     const load = async () => {
         try {
             const data = await api.get<any[]>('/online-classes');
             setClasses(data);
+
+            if (canCreate) {
+                const offRes = await api.get<any[]>(user?.role === 'ADMIN' ? '/course-offerings' : '/course-offerings/my');
+                setOfferings(offRes);
+            }
         } catch { /* ignore */ }
         setLoading(false);
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [user]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,6 +83,7 @@ export default function OnlineClassesPage() {
                 description: description || undefined,
                 meetingLink: platform === 'In-App' ? undefined : meetingLink,
                 platform,
+                courseOfferingId: courseOfferingId || undefined,
                 scheduledAt: new Date(scheduledAt).toISOString(),
                 durationMinutes: parseInt(durationMinutes) || 60,
             };
@@ -88,7 +97,7 @@ export default function OnlineClassesPage() {
             setShowForm(false);
             setEditingClassId(null);
             setTitle(''); setDescription(''); setMeetingLink('');
-            setPlatform('In-App');
+            setPlatform('In-App'); setCourseOfferingId('');
             setScheduledAt(''); setDurationMinutes('60');
             await load();
         } catch (err: any) { setError(err.message); }
@@ -108,6 +117,7 @@ export default function OnlineClassesPage() {
         setDescription(cls.description || '');
         setPlatform(cls.platform);
         setMeetingLink(cls.meetingLink || '');
+        setCourseOfferingId(cls.courseOfferingId || '');
         
         // Format date for datetime-local input
         const d = new Date(cls.scheduledAt);
@@ -199,6 +209,21 @@ export default function OnlineClassesPage() {
                                         onChange={e => setPlatform(e.target.value)}
                                     >
                                         {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label>Select Target Class / Section</Label>
+                                    <select
+                                        className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
+                                        value={courseOfferingId}
+                                        onChange={e => setCourseOfferingId(e.target.value)}
+                                    >
+                                        <option value="">-- All Students (Global Event) --</option>
+                                        {offerings.map(off => (
+                                            <option key={off.id} value={off.id}>
+                                                {off.subject.title} ({off.section.name})
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                                 {platform !== 'In-App' && (
