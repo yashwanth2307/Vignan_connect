@@ -74,17 +74,39 @@ export default function MagazinePage() {
                                     placeholder="e.g. Vignan Voice - Jan 2026" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-sm font-medium">PDF File URL *</label>
-                                <input value={fileUrl} onChange={e => setFileUrl(e.target.value)}
-                                    className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
-                                    placeholder="https://link-to-pdf.com/file.pdf" />
+                                <label className="text-sm font-medium">Upload PDF File *</label>
+                                <input 
+                                    type="file" 
+                                    accept="application/pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        if (file.size > 5 * 1024 * 1024) return alert("File is too large! Maximum limit is 5MB.");
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => setFileUrl(reader.result as string);
+                                        reader.readAsDataURL(file);
+                                    }}
+                                    className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
+                                />
+                                {fileUrl && <p className="text-xs text-green-500 mt-1">✓ PDF attached successfully</p>}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-sm font-medium">Thumbnail URL (Cover Image)</label>
-                            <input value={thumbnailUrl} onChange={e => setThumbnailUrl(e.target.value)}
-                                className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
-                                placeholder="https://link-to-image.com/cover.jpg" />
+                            <label className="text-sm font-medium">Upload Cover Image (Thumbnail) *</label>
+                            <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    if (file.size > 2 * 1024 * 1024) return alert("Image is too large! Maximum limit is 2MB.");
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => setThumbnailUrl(reader.result as string);
+                                    reader.readAsDataURL(file);
+                                }}
+                                className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
+                            />
+                            {thumbnailUrl && <p className="text-xs text-green-500 mt-1">✓ Cover image attached successfully</p>}
                         </div>
                         <div className="space-y-1">
                             <label className="text-sm font-medium">Description</label>
@@ -119,8 +141,8 @@ export default function MagazinePage() {
                             </p>
                             <div className="flex items-center justify-between mt-4">
                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={mag.fileUrl} target="_blank" rel="noreferrer">
-                                        <Download className="w-4 h-4 mr-1" /> View PDF
+                                    <a href={mag.fileUrl} target="_blank" rel="noreferrer" download={`${mag.title}.pdf`}>
+                                        <Download className="w-4 h-4 mr-1" /> Download PDF
                                     </a>
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => handleDelete(mag.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">

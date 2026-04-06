@@ -69,10 +69,21 @@ export default function GalleryPage() {
                     <CardContent className="p-6 space-y-4">
                         <div className="grid sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-sm font-medium">Image URL *</label>
-                                <input value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                                    className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
-                                    placeholder="https://link-to-image.jpg" />
+                                <label className="text-sm font-medium">Upload Media (Photo/Video) *</label>
+                                <input 
+                                    type="file" 
+                                    accept="image/*,video/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        if (file.size > 3.5 * 1024 * 1024) return alert("File is too large! Maximum limit is 3.5MB.");
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => setImageUrl(reader.result as string);
+                                        reader.readAsDataURL(file);
+                                    }}
+                                    className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
+                                />
+                                {imageUrl && <p className="text-xs text-green-500 mt-1">✓ Media attached successfully</p>}
                             </div>
                             <div className="space-y-1">
                                 <label className="text-sm font-medium">Category</label>
@@ -102,7 +113,11 @@ export default function GalleryPage() {
                 {photos.map(photo => (
                     <Card key={photo.id} className="overflow-hidden group relative">
                         {photo.imageUrl ? (
-                            <img src={photo.imageUrl} alt={photo.title || 'Gallery'} className="w-full aspect-square object-cover" />
+                            photo.imageUrl.startsWith('data:video') || photo.imageUrl.endsWith('.mp4') ? (
+                                <video src={photo.imageUrl} autoPlay loop muted playsInline className="w-full aspect-square object-cover" />
+                            ) : (
+                                <img src={photo.imageUrl} alt={photo.title || 'Gallery'} className="w-full aspect-square object-cover" />
+                            )
                         ) : (
                             <div className="w-full aspect-square bg-muted flex items-center justify-center">
                                 <ImageIcon className="w-8 h-8 opacity-20" />

@@ -31,15 +31,50 @@ const leadership = [
 export default function LandingPage() {
   const [magazines, setMagazines] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
     // Optionally fetch public data
     api.get('/college-magazines').then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
     api.get('/college-gallery').then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
+    api.get('/announcements').then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
   }, []);
+
+  const importantAnnouncements = announcements.filter(a => a.isImportant);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))]">
+      {/* Red Scrolling Info Bar */}
+      {importantAnnouncements.length > 0 && (
+        <div className="bg-red-600 text-white font-semibold text-sm py-2 overflow-hidden flex whitespace-nowrap mt-16 z-40 relative">
+            <span className="shrink-0 animate-[marquee_20s_linear_infinite] px-4 flex gap-12 text-md tracking-wide">
+                {importantAnnouncements.map((ann, i) => (
+                    <span key={i} className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" /> {ann.title}: {ann.message}
+                    </span>
+                ))}
+            </span>
+             <span className="shrink-0 animate-[marquee_20s_linear_infinite] px-4 flex gap-12 text-md tracking-wide">
+                {importantAnnouncements.map((ann, i) => (
+                    <span key={`dup-${i}`} className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" /> {ann.title}: {ann.message}
+                    </span>
+                ))}
+            </span>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        @keyframes marquee-up {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+        }
+      `}</style>
+
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-[hsl(var(--border))] shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -61,7 +96,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-16 min-h-[92vh] flex items-center overflow-hidden">
+      <section className={`relative min-h-[92vh] flex items-center overflow-hidden ${importantAnnouncements.length === 0 ? 'pt-16' : ''}`}>
         <div className="absolute inset-0 z-0">
           <img src="/images/campus2.jpg" alt="VGNT Campus" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-blue-950/92 via-indigo-950/88 to-purple-950/80" />
@@ -290,18 +325,27 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-bold">Dynamic Gallery</h3>
               </div>
               {gallery.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {gallery.slice(0, 6).map((img, i) => (
-                    <motion.div key={img.id} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all aspect-square border-2 border-transparent hover:border-orange-200">
-                      <img src={img.imageUrl} alt={img.title || 'Gallery'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                        <div>
-                           <p className="text-white font-semibold text-sm line-clamp-1">{img.title || 'Campus Selection'}</p>
-                           <p className="text-white/70 text-[10px]">{img.category}</p>
+                <div className="h-[400px] overflow-hidden relative group">
+                  <div className="grid grid-cols-2 gap-4 animate-[marquee-up_30s_linear_infinite] group-hover:[animation-play-state:paused]">
+                    {[...gallery, ...gallery, ...gallery].map((img, i) => (
+                      <div key={`${img.id}-${i}`} className="group relative rounded-2xl overflow-hidden shadow-sm aspect-square border-2 border-transparent hover:border-orange-200">
+                        {img.imageUrl?.startsWith('data:video') || img.imageUrl?.endsWith('.mp4') ? (
+                            <video src={img.imageUrl} autoPlay loop muted playsInline className="w-full h-full object-cover transition-transform duration-500" />
+                        ) : (
+                            <img src={img.imageUrl} alt={img.title || 'Gallery'} className="w-full h-full object-cover transition-transform duration-500" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end p-4">
+                          <div>
+                             <p className="text-white font-semibold text-sm line-clamp-1">{img.title || 'Campus Selection'}</p>
+                             <p className="text-white/70 text-[10px]">{img.category}</p>
+                          </div>
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
+                    ))}
+                  </div>
+                  {/* Fades */}
+                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white dark:from-gray-900 to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none" />
                 </div>
               ) : (
                 <div className="h-64 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">
@@ -320,30 +364,35 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-bold">College Magazines</h3>
               </div>
               {magazines.length > 0 ? (
-                <div className="space-y-4">
-                  {magazines.slice(0, 4).map((mag, i) => (
-                    <motion.div key={mag.id} initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex gap-4 border shadow-sm hover:shadow-md transition-shadow group">
-                      <div className="w-20 h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100 border relative">
-                        {mag.thumbnailUrl ? (
-                          <img src={mag.thumbnailUrl} alt={mag.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <BookIcon className="w-8 h-8 opacity-20" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+                <div className="h-[400px] overflow-hidden relative group">
+                  <div className="space-y-4 animate-[marquee-up_25s_linear_infinite] group-hover:[animation-play-state:paused]">
+                    {[...magazines, ...magazines].map((mag, i) => (
+                      <div key={`${mag.id}-${i}`} className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex gap-4 border shadow-sm hover:shadow-md transition-shadow group">
+                        <div className="w-20 h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100 border relative">
+                          {mag.thumbnailUrl ? (
+                            <img src={mag.thumbnailUrl} alt={mag.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookIcon className="w-8 h-8 opacity-20" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <h4 className="font-bold text-lg mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">{mag.title}</h4>
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3 leading-snug">{mag.description || 'Vignan\'s official newsletter featuring achievements, events, and campus life.'}</p>
+                          <Button variant="outline" size="sm" asChild className="w-fit">
+                            <a href={mag.fileUrl} target="_blank" rel="noreferrer" download={`${mag.title}.pdf`}>
+                              <Download className="w-4 h-4 mr-2" /> Read Issue
+                            </a>
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h4 className="font-bold text-lg mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">{mag.title}</h4>
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 leading-snug">{mag.description || 'Vignan\'s official newsletter featuring achievements, events, and campus life.'}</p>
-                        <Button variant="outline" size="sm" asChild className="w-fit">
-                          <a href={mag.fileUrl} target="_blank" rel="noreferrer">
-                            <Download className="w-4 h-4 mr-2" /> Read Issue
-                          </a>
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
+                    ))}
+                  </div>
+                  {/* Fades */}
+                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white dark:from-gray-900 to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none" />
                 </div>
               ) : (
                 <div className="h-64 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">

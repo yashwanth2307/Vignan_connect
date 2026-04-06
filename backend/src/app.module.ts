@@ -27,6 +27,7 @@ import { RequestsModule } from './requests/requests.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CollegeMagazineModule } from './college-magazine/college-magazine.module';
 import { CollegeGalleryModule } from './college-gallery/college-gallery.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { CollegeGalleryModule } from './college-gallery/college-gallery.module';
     ClubsModule,
     CollegeMagazineModule,
     CollegeGalleryModule,
+    EventsModule,
   ],
 })
 export class AppModule {}

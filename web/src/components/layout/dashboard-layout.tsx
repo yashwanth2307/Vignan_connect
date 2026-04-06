@@ -10,7 +10,7 @@ import { useAuth, UserRole } from '@/contexts/auth-context';
 import { useTheme } from 'next-themes';
 import {
     LayoutDashboard, Users, Building2, BookOpen, Calendar, ClipboardCheck,
-    GraduationCap, FileText, BarChart3, LogOut, Key, X, Loader2,
+    GraduationCap, FileText, BarChart3, LogOut, Key, X, Loader2, Bell,
     ChevronLeft, ChevronRight, Sun, Moon, Menu,
     UserCircle, Layers, Award, ClipboardList, Video, Code2, Trophy, Upload, MessageCircle, Briefcase,
     CalendarDays, ArrowUpCircle, Ticket, FileSpreadsheet, Camera, Send, Sparkles
@@ -45,6 +45,8 @@ const adminNav: NavItem[] = [
     { label: 'Clubs', href: '/dashboard/admin/clubs', icon: Sparkles },
     { label: 'Magazine', href: '/dashboard/admin/magazine', icon: FileText },
     { label: 'Gallery', href: '/dashboard/admin/gallery', icon: Camera },
+    { label: 'Announcements', href: '/dashboard/admin/announcements', icon: Bell },
+    { label: 'Events', href: '/dashboard/admin/events', icon: Sparkles },
     { label: 'Requests', href: '/dashboard/requests', icon: Send },
     { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
 ];

@@ -17,6 +17,7 @@ export class AnnouncementsService {
         message: dto.message,
         targetRole: dto.targetRole || null,
         departmentId: dto.departmentId || null,
+        isImportant: dto.isImportant ?? false,
         createdById: userId,
       },
       include: { createdBy: { select: { name: true, role: true } } },

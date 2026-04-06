@@ -22,4 +22,8 @@ export class CreateAnnouncementDto {
   @IsOptional()
   @IsString()
   departmentId?: string;
+
+  @ApiPropertyOptional({ description: 'Marks announcement as an important scrolling bar info' })
+  @IsOptional()
+  isImportant?: boolean;
 }

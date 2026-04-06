@@ -281,6 +281,7 @@ model Student {
   groupSubmissions      GroupSubmission[]
   clubMemberships       ClubMember[]
   promotionRecords      SemesterPromotionRecord[]
+  eventRegistrations    EventRegistration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -539,20 +540,36 @@ model PointsLedger {
 // ──────────────────────────────────────────
 
 model Event {
-  id          String      @id @default(uuid())
-  title       String
-  description String?
-  formUrl     String?
-  startsAt    DateTime
-  expiresAt   DateTime
-  createdById String
-  createdBy   User        @relation("EventCreator", fields: [createdById], references: [id])
-  status      EventStatus @default(DRAFT)
+  id                     String      @id @default(uuid())
+  title                  String
+  description            String?
+  imageUrl               String?
+  formUrl                String?
+  isInternalRegistration Boolean     @default(false)
+  startsAt               DateTime
+  expiresAt              DateTime
+  createdById            String
+  createdBy              User        @relation("EventCreator", fields: [createdById], references: [id])
+  status                 EventStatus @default(DRAFT)
+
+  registrations EventRegistration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("events")
+}
+
+model EventRegistration {
+  id           String   @id @default(uuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  registeredAt DateTime @default(now())
+
+  @@unique([eventId, studentId])
+  @@map("event_registrations")
 }
 
 // ──────────────────────────────────────────
@@ -679,6 +696,7 @@ model Announcement {
   createdById  String
   createdBy    User     @relation(fields: [createdById], references: [id])
   isActive     Boolean  @default(true)
+  isImportant  Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
