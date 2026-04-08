@@ -4,11 +4,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../webhooks/webhook.service';
 import { CreateOnlineClassDto } from './dto/create-online-class.dto';
 
 @Injectable()
 export class OnlineClassesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private webhooks: WebhookService,
+  ) {}
 
   async create(dto: CreateOnlineClassDto, userId: string) {
     // Verify the faculty owns this course offering (only if courseOfferingId is provided)
@@ -57,6 +61,11 @@ export class OnlineClassesService {
           },
         },
       },
+    }).then(cls => {
+      // Fire-and-forget notification
+      this.webhooks.onlineClassScheduled(cls)
+        .catch(e => console.error('Online class notification error:', e));
+      return cls;
     });
   }
 

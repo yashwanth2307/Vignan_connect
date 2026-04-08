@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../webhooks/webhook.service';
 
 @Injectable()
 export class EventsService {
-    constructor(private prisma: PrismaService) {}
+    constructor(
+        private prisma: PrismaService,
+        private webhooks: WebhookService,
+    ) {}
 
     async createEvent(userId: string, data: any) {
-        return this.prisma.event.create({
+        const event = await this.prisma.event.create({
             data: {
                 title: data.title,
                 description: data.description || null,
@@ -19,6 +23,12 @@ export class EventsService {
                 createdById: userId,
             }
         });
+
+        // Fire-and-forget notification
+        this.webhooks.eventPublished(event)
+            .catch(e => console.error('Event notification error:', e));
+
+        return event;
     }
 
     async getEvents() {

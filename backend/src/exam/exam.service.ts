@@ -4,11 +4,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../webhooks/webhook.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ExamService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private webhooks: WebhookService,
+  ) {}
 
   // ── Semesters ──
   async listSemesters(departmentId?: string) {
@@ -28,7 +32,7 @@ export class ExamService {
     slot: string;
     semesterId: string;
   }) {
-    return this.prisma.examSession.create({
+    const session = await this.prisma.examSession.create({
       data: {
         subjectId: data.subjectId,
         date: new Date(data.date),
@@ -37,6 +41,12 @@ export class ExamService {
       },
       include: { subject: true, semester: true },
     });
+
+    // Fire-and-forget exam notification
+    this.webhooks.examScheduled(session)
+      .catch(e => console.error('Exam notification error:', e));
+
+    return session;
   }
 
   async listExamSessions(semesterId?: string) {
@@ -314,10 +324,16 @@ export class ExamService {
   }
 
   async releaseResults(semesterId: string) {
-    return this.prisma.marks.updateMany({
+    const result = await this.prisma.marks.updateMany({
       where: { semesterId, status: 'LOCKED' },
       data: { status: 'RELEASED' },
     });
+
+    // Fire-and-forget results notification
+    this.webhooks.resultsReleased(semesterId)
+      .catch(e => console.error('Results notification error:', e));
+
+    return result;
   }
 
   // ── Student: Get My Marks ──

@@ -6,10 +6,14 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../webhooks/webhook.service';
 
 @Injectable()
 export class GroupsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private webhooks: WebhookService,
+  ) {}
 
   // ── Group CRUD ──
 
@@ -217,7 +221,7 @@ export class GroupsService {
   ) {
     await this.verifyGroupOwner(groupId, userId);
 
-    return this.prisma.groupAssignment.create({
+    const assignment = await this.prisma.groupAssignment.create({
       data: {
         groupId,
         title: dto.title,
@@ -229,6 +233,18 @@ export class GroupsService {
         _count: { select: { submissions: true } },
       },
     });
+
+    // Get group + faculty name for notification
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      include: { faculty: { include: { user: { select: { name: true } } } } },
+    });
+    // Fire-and-forget notification
+    this.webhooks.assignmentPosted(
+      assignment, group, group?.faculty?.user?.name || 'Faculty',
+    ).catch(e => console.error('Assignment notification error:', e));
+
+    return assignment;
   }
 
   async getGroupAssignments(groupId: string, userId: string) {
@@ -552,7 +568,7 @@ export class GroupsService {
         reviewedAt: new Date(),
       },
       include: {
-        student: { include: { user: { select: { name: true } } } },
+        student: { include: { user: { select: { name: true, email: true } } } },
       },
     });
 
@@ -566,6 +582,16 @@ export class GroupsService {
         },
       });
     }
+
+    // Fire-and-forget review notification
+    this.webhooks.assignmentReviewed({
+      studentName: updated.student.user.name,
+      studentEmail: updated.student.user.email,
+      assignmentTitle: submission.assignment.title,
+      status: dto.status,
+      vPointsAwarded: vPoints,
+      facultyRemarks: dto.facultyRemarks,
+    }).catch(e => console.error('Review notification error:', e));
 
     return updated;
   }

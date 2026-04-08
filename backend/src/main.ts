@@ -15,8 +15,17 @@ async function bootstrap() {
 
   // Increase payload size limit
   const express = require('express');
+  const path = require('path');
+  const fs = require('fs');
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // Serve uploaded files statically
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs.existsSync(path.join(uploadsDir, 'gallery'))) fs.mkdirSync(path.join(uploadsDir, 'gallery'), { recursive: true });
+  if (!fs.existsSync(path.join(uploadsDir, 'magazines'))) fs.mkdirSync(path.join(uploadsDir, 'magazines'), { recursive: true });
+  app.use('/uploads', express.static(uploadsDir));
 
   // Global validation pipe
   app.useGlobalPipes(

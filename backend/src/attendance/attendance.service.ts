@@ -5,10 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhookService } from '../webhooks/webhook.service';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private webhooks: WebhookService,
+  ) {}
 
   // ── Get students by section + semester + department filters ──
   async getStudentsByFilters(
@@ -178,26 +182,130 @@ export class AttendanceService {
       })),
     });
 
+    // Fire-and-forget absent notifications
+    this.notifyAbsentStudents(sessionId, records, session)
+      .catch(e => console.error('Absent notification error:', e));
+
     return this.getSessionRecords(sessionId);
   }
 
-  // ── Stop Session ──
+  // ── Notify students marked ABSENT ──
+  private async notifyAbsentStudents(
+    sessionId: string,
+    records: Array<{ studentId: string; status: string }>,
+    session: any,
+  ) {
+    const absentIds = records
+      .filter(r => r.status === 'ABSENT')
+      .map(r => r.studentId);
+    if (absentIds.length === 0) return;
+
+    // Get subject name
+    const co = await this.prisma.courseOffering.findUnique({
+      where: { id: session.courseOfferingId },
+      include: { subject: true },
+    });
+    const subjectName = co?.subject?.title || 'Unknown Subject';
+    const dateStr = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: absentIds } },
+      include: { user: { select: { name: true, email: true } } },
+    });
+
+    for (const s of students) {
+      await this.webhooks.studentAbsent({
+        studentName: s.user.name,
+        studentEmail: s.user.email,
+        rollNo: s.rollNo,
+        subject: subjectName,
+        date: dateStr,
+        hourIndex: session.hourIndex || 0,
+      });
+    }
+  }
+
+  // ── Stop Session — and trigger low attendance alerts ──
   async stopSession(sessionId: string, userId: string) {
     const faculty = await this.prisma.faculty.findUnique({ where: { userId } });
     if (!faculty) throw new ForbiddenException('Not a faculty');
 
     const session = await this.prisma.attendanceSession.findUnique({
       where: { id: sessionId },
-      include: { courseOffering: true },
+      include: {
+        courseOffering: {
+          include: { subject: true },
+        },
+      },
     });
     if (!session) throw new NotFoundException('Session not found');
     if (session.courseOffering.facultyId !== faculty.id)
       throw new ForbiddenException('Not your session');
 
-    return this.prisma.attendanceSession.update({
+    const closed = await this.prisma.attendanceSession.update({
       where: { id: sessionId },
       data: { status: 'CLOSED' },
     });
+
+    // ── Trigger low attendance alerts (fire-and-forget) ──
+    this.checkAndAlertLowAttendance(
+      session.courseOffering.sectionId,
+      session.courseOfferingId,
+      session.courseOffering.subject?.title || 'Unknown Subject',
+    ).catch((err) => console.error('Low attendance check error:', err));
+
+    return closed;
+  }
+
+  // ── Check all students in a section for low attendance ──
+  private async checkAndAlertLowAttendance(
+    sectionId: string,
+    courseOfferingId: string,
+    subjectName: string,
+  ) {
+    // Get all sessions for this course offering
+    const allSessions = await this.prisma.attendanceSession.findMany({
+      where: { courseOfferingId, status: 'CLOSED' },
+      select: { id: true },
+    });
+    const totalSessions = allSessions.length;
+    if (totalSessions < 5) return; // Only alert after enough data
+
+    const sessionIds = allSessions.map((s) => s.id);
+
+    // Get all students in the section
+    const students = await this.prisma.student.findMany({
+      where: { sectionId },
+      include: {
+        user: { select: { name: true, email: true } },
+        attendanceRecords: {
+          where: {
+            attendanceSessionId: { in: sessionIds },
+            status: 'PRESENT',
+          },
+          select: { id: true },
+        },
+      },
+    });
+
+    for (const student of students) {
+      const attended = student.attendanceRecords.length;
+      const percentage = Math.round((attended / totalSessions) * 100);
+
+      if (percentage < 75) {
+        await this.webhooks.lowAttendanceAlert(
+          {
+            name: student.user.name,
+            email: student.user.email,
+            rollNo: student.rollNo,
+          },
+          subjectName,
+          percentage,
+        );
+      }
+    }
   }
 
   // ── Get Session Records ──
