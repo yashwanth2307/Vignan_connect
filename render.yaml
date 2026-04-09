@@ -50,8 +50,9 @@ services:
   # 3. n8n Workflow Automation Engine
   - type: web
     name: vconnect-n8n
-    env: docker
-    image: n8nio/n8n:latest
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:latest
     disk:
       name: n8n-data
       mountPath: /home/node/.n8n
