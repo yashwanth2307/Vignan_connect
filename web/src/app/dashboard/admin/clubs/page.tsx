@@ -9,13 +9,18 @@ import api from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function AdminClubsPage() {
+    const { user } = useAuth();
     const [clubs, setClubs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [faculty, setFaculty] = useState<any[]>([]);
     const [open, setOpen] = useState(false);
+    const [eventOpen, setEventOpen] = useState(false);
+    const [selectedClubId, setSelectedClubId] = useState('');
     const [formData, setFormData] = useState({ name: '', category: 'Technical', description: '', coordinatorId: '' });
+    const [eventData, setEventData] = useState({ title: '', description: '', date: '', venue: '' });
 
     const loadData = async () => {
         try {
@@ -45,6 +50,17 @@ export default function AdminClubsPage() {
         if (!confirm('Are you sure you want to delete this club? All members and events will be removed.')) return;
         try {
             await api.delete(`/clubs/${id}`);
+            loadData();
+        } catch (e: any) { alert(e.message); }
+    };
+
+    const createEvent = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await api.post(`/clubs/${selectedClubId}/events`, eventData);
+            setEventOpen(false);
+            setEventData({ title: '', description: '', date: '', venue: '' });
+            alert('Event successfully created');
             loadData();
         } catch (e: any) { alert(e.message); }
     };
@@ -126,6 +142,36 @@ export default function AdminClubsPage() {
                                         <div className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {c._count?.members || 0} Members</div>
                                         <div className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5" /> {c._count?.events || 0} Events</div>
                                     </div>
+                                    <Dialog open={eventOpen && selectedClubId === c.id} onOpenChange={(isOpen: boolean) => {
+                                        setEventOpen(isOpen);
+                                        if (isOpen) setSelectedClubId(c.id);
+                                    }}>
+                                        <DialogTrigger asChild onClick={() => { setEventOpen(true); setSelectedClubId(c.id); }}>
+                                            <Button variant="outline" className="w-full border-dashed"><Plus className="w-3 h-3 mr-2" /> Schedule Event</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader><DialogTitle>Schedule Event for {c.name}</DialogTitle></DialogHeader>
+                                            <form onSubmit={createEvent} className="space-y-4 pt-4">
+                                                <div>
+                                                    <label className="text-sm font-medium">Event Title</label>
+                                                    <Input required value={eventData.title} onChange={e => setEventData({ ...eventData, title: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-medium">Description</label>
+                                                    <Input required value={eventData.description} onChange={e => setEventData({ ...eventData, description: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-medium">Event Date</label>
+                                                    <Input type="datetime-local" required value={eventData.date} onChange={e => setEventData({ ...eventData, date: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-medium">Venue</label>
+                                                    <Input required value={eventData.venue} onChange={e => setEventData({ ...eventData, venue: e.target.value })} />
+                                                </div>
+                                                <Button type="submit" className="w-full">Create Event</Button>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
                                     <div className="pt-2">
                                         <Button variant="outline" size="sm" className="w-full text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20" onClick={() => deleteClub(c.id)}>
                                             <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Club

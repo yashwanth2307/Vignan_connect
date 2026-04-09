@@ -107,7 +107,7 @@ const studentNav: NavItem[] = [
     { label: 'Online Classes', href: '/dashboard/admin/online-classes', icon: Video },
     { label: 'Groups', href: '/dashboard/student/groups', icon: MessageCircle },
     { label: 'Code Arena', href: '/dashboard/code-arena', icon: Code2 },
-    { label: 'Leaderboard', href: '/dashboard/code-arena/leaderboard', icon: Trophy },
+    { label: 'Hall Tickets', href: '/dashboard/student/hall-tickets', icon: FileText },
     { label: 'Profile & Photo', href: '/dashboard/student/profile', icon: Camera },
     { label: 'Clubs', href: '/dashboard/student/clubs', icon: Sparkles },
     { label: 'Requests', href: '/dashboard/requests', icon: Send },
