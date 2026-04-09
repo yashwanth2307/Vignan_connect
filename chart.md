@@ -1,46 +1,234 @@
-# V-Connect 2.0 - Project Architecture & Highlights
+# V-Connect 2.0 — Complete Feature Chart
 
-## 🏆 Project Overview
-V-Connect is a comprehensive, multi-role Learning Management and Campus Administration System built with a highly robust Next.js frontend and a performant NestJS/Prisma backend. It connects Students, Faculty, Admins, HODs, TPOs, and the Exam Cell into a unified digital campus.
+## Technology Stack
 
----
-
-## 🛠️ Technology Stack
-*   **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, Framer Motion, Lucide Icons.
-*   **Backend:** NestJS, TypeScript, `@nestjs/websockets` (Socket.io).
-*   **Database:** PostgreSQL (Neon Tech), Prisma ORM, Redis (ioredis).
-*   **Deployment:** Vercel (Front & Back), optimized for Serverless / Ephemeral constraints.
-
----
-
-## 🌟 Key Highlights & Features
-
-### 1. Robust Role-Based Access Control (RBAC)
-*   **Dedicated Dashboards:** Specific dynamic routes and features locked via Guards for `ADMIN`, `FACULTY`, `STUDENT`, `EXAM_CELL`, `TPO`, `HOD`, `LIBRARY`, and `PRINCIPAL`.
-*   **Data Integrity:** Role-based access ensures faculty can only mark attendance for their assigned subjects, while students only see their own marks and alerts.
-
-### 2. V-Connect Live Classroom (Zoom Alternative)
-*   **Native WebRTC Video Conferencing:** Completely built-in! Uses standard WebRTC `RTCPeerConnection` for real-time video mesh without relying on expensive external iframes like Jitsi.
-*   **Smart Socket.io Signaling:** `ClassroomGateway` manages dynamic room joining, real-time peer state, and disconnects.
-*   **Live Interactive Whiteboard:** Faculty can draw on a digital canvas that is broadcasted instantly to student screens over WebSocket streams. Screen sharing and host controls are natively supported.
-
-### 3. Automated Notification Engine (n8n + Nodemailer)
-*   **Event-Driven Architecture:** A centralized `WebhookService` acts as the nervous system for the platform. It wraps 11 distinct event triggers (e.g., `STUDENT_ABSENT`, `RESULTS_RELEASED`, `EXAM_SCHEDULED`).
-*   **Fault-Tolerant Delivery:** Intelligently pings an `n8n` webhook endpoint if enabled (`N8N_ENABLED=true`), but guarantees delivery by autonomously dispatching rich HTML emails via `Nodemailer` directly through Gmail SMTP. Emails are confirmed to be sending accurately!
-*   *Highlights:* Automated Welcome Emails (with plaintext keys), Low Attendance Alerts, and Absentee Reports sent out the moment Attendance is submitted.
-
-### 4. Advanced Academic Operations
-*   **Semester Promotion Engine:** Automates promoting entire groups of students to the next semester or graduating them based on their current academic standing.
-*   **Timetable Integration:** Supports rendering complex schedules mapped perfectly to Course Offerings, Sections, and distinct Branch patterns.
-*   **Exam Cell:** Centralized module for declaring exam schedules and seamlessly publishing digital results/report cards via the portal.
-
-### 5. Media & Engagement Modules
-*   **College Gallery & Magazines:** Integrated file-upload system (`Multer` configured safely for Vercel) enabling admins to post college updates, newsletters, and dynamic image grids directly to student dashboards.
-*   **Code Arena:** Gamified competitive coding environment where students tackle algorithmic challenges and track their rank on universal leaderboards.
+| Layer        | Technology                                          |
+|--------------|-----------------------------------------------------|
+| Frontend     | Next.js 14 (App Router), React 18, Tailwind CSS     |
+| Backend      | NestJS, TypeScript, Prisma ORM                      |
+| Database     | PostgreSQL (Neon Tech)                               |
+| Real-Time    | Socket.io, WebRTC (Peer-to-Peer Mesh)               |
+| Automation   | n8n Workflow Engine, Nodemailer (Gmail SMTP)         |
+| Animation    | Framer Motion, Lucide Icons                          |
+| Auth         | JWT (Access + Refresh Tokens), Bcrypt                |
+| File Upload  | Multer (Local / Cloud)                               |
+| Deployment   | Vercel (Frontend), Render (Backend + n8n)            |
 
 ---
 
-### 🟢 Status Check: Notifications & Emailing
-**Emails are FULLY FUNCTIONAL and actively sending!**
-The `WebhookService` natively delegates to `Nodemailer` directly via Gmail SMTP (`SMTP_USER`) to guarantee automated emails are delivered regardless of the n8n container status. 
-Currently, the webhook URLs point to the `n8n` workflow instances; however, since email fallback is securely handled internally by NestJS, *absent notifications, welcome emails, and low attendance alerts* all send perfectly behind the scenes upon every database action.
+## Roles & Access Control (RBAC)
+
+| Role       | Dashboard Features                                                                                   |
+|------------|------------------------------------------------------------------------------------------------------|
+| ADMIN      | User Management, Departments, Sections, Subjects, Timetable, Clubs, Events, Gallery, Magazines, Announcements, Semester Promotion, Reports |
+| FACULTY    | Attendance Marking, Marks Upload, Topics Taught, Materials, Assignments, Online Classes, Groups, Club Coordination, Evaluation |
+| STUDENT    | Attendance View, Marks View, Hall Tickets, Timetable, Online Classes, Code Arena, Clubs, Groups, Profile, Service Requests |
+| EXAM_CELL  | Exam Sessions, Marks Verification, Results Publishing, Hall Ticket Generation, Answer Scripts, Reports |
+| TPO        | Placement Drives, Student Applications, Placement Reports & Analytics                                |
+| HOD        | Department Overview, Faculty Management, Attendance Reports                                          |
+
+---
+
+## Module-wise Feature List
+
+### 1. Authentication & User Management
+| Feature                         | Status |
+|---------------------------------|--------|
+| JWT Login (Access + Refresh)    | ✅      |
+| Role-Based Dashboard Routing    | ✅      |
+| Password Reset (Token-based)    | ✅      |
+| Admin: Create Students (Bulk)   | ✅      |
+| Admin: Create Faculty           | ✅      |
+| Admin: Create Exam Cell / TPO   | ✅      |
+| Welcome Email on Account Create | ✅      |
+
+### 2. Academic Structure
+| Feature                              | Status |
+|--------------------------------------|--------|
+| Departments (CRUD)                   | ✅      |
+| Sections per Department              | ✅      |
+| Regulations (R20, R22, etc.)         | ✅      |
+| Semesters per Regulation/Department  | ✅      |
+| Subjects (Theory, Lab, Elective)     | ✅      |
+| Course Offerings (Subject+Section+Faculty) | ✅ |
+| Semester Promotion Engine            | ✅      |
+
+### 3. Timetable
+| Feature                          | Status |
+|----------------------------------|--------|
+| Auto-Generated Timetable        | ✅      |
+| Section-wise Weekly Schedule     | ✅      |
+| Faculty Personal Timetable      | ✅      |
+| Student Timetable View          | ✅      |
+
+### 4. Attendance System
+| Feature                               | Status |
+|---------------------------------------|--------|
+| Faculty: Start Attendance Session     | ✅      |
+| Click-to-Cycle Status (P/A/L/OD/ML)  | ✅      |
+| Mark All Present / Absent             | ✅      |
+| Student: View Own Attendance          | ✅      |
+| Auto Absent Alert Email               | ✅      |
+| Low Attendance Warning Email          | ✅      |
+
+### 5. Marks & Examination Pipeline
+| Feature                                    | Status |
+|--------------------------------------------|--------|
+| Faculty: Upload Mid-1 Marks                | ✅      |
+| Faculty: Upload Mid-2 Marks                | ✅      |
+| Faculty: Upload Internal Marks             | ✅      |
+| Faculty: Upload External Marks             | ✅      |
+| Faculty: Bulk Upload (CSV Support)         | ✅      |
+| Exam Cell: Create Exam Sessions            | ✅      |
+| Exam Cell: Verify Submitted Marks          | ✅      |
+| Exam Cell: Lock Verified Marks             | ✅      |
+| Exam Cell: Publish / Release Results       | ✅      |
+| Student: View Published Marks              | ✅      |
+| Marks Status Flow: DRAFT → SUBMITTED → VERIFIED → LOCKED → RELEASED | ✅ |
+
+### 6. Hall Tickets
+| Feature                                      | Status |
+|----------------------------------------------|--------|
+| Exam Cell: Generate Hall Tickets             | ✅      |
+| Student: View & Print Hall Ticket            | ✅      |
+| Vignan Institute Branding (Logo + Name)      | ✅      |
+| Principal Digital Signature Area             | ✅      |
+| Controller of Examinations Signature Area    | ✅      |
+| Student Photo Placeholder                    | ✅      |
+| Subject Table with Invigilator Sign Column   | ✅      |
+| Print-Optimized A4 Layout                    | ✅      |
+
+### 7. Answer Scripts & Evaluation
+| Feature                              | Status |
+|--------------------------------------|--------|
+| Generate Barcoded Answer Scripts     | ✅      |
+| Distribute Scripts to Faculty        | ✅      |
+| Faculty: Submit Evaluation           | ✅      |
+| Exam Cell: Verify Evaluation Tasks   | ✅      |
+
+### 8. Online Classes (Live Classroom)
+| Feature                                | Status |
+|----------------------------------------|--------|
+| WebRTC Peer-to-Peer Video Calling      | ✅      |
+| Socket.io Signaling Server             | ✅      |
+| Interactive Whiteboard (Canvas)        | ✅      |
+| Screen Sharing                         | ✅      |
+| Schedule / Join Classes                | ✅      |
+
+### 9. Learning Management (LMS)
+| Feature                        | Status |
+|--------------------------------|--------|
+| Materials Upload               | ✅      |
+| Assignments (Create + Submit)  | ✅      |
+| Quizzes with Scoring           | ✅      |
+| Topics Taught Log              | ✅      |
+| Group Projects & Submissions   | ✅      |
+
+### 10. Code Arena (Competitive Coding)
+| Feature                          | Status |
+|----------------------------------|--------|
+| Problem Bank (EASY/MEDIUM/HARD)  | ✅      |
+| Code Editor with Execution       | ✅      |
+| Test Case Validation              | ✅      |
+| V-Points & Streaks               | ✅      |
+| Contest Mode (Live Contests)      | ✅      |
+| Global Leaderboard               | ✅      |
+
+### 11. Placement Module (TPO)
+| Feature                              | Status |
+|--------------------------------------|--------|
+| Create Placement Drives              | ✅      |
+| Set Eligibility (Branch/CGPA)        | ✅      |
+| Student: Apply to Drives             | ✅      |
+| TPO: Review Applications             | ✅      |
+| TPO: Update Status (Shortlist/Select/Reject) | ✅ |
+| TPO: Placement Reports & Charts      | ✅      |
+
+### 12. Clubs & Events
+| Feature                           | Status |
+|-----------------------------------|--------|
+| Admin/Faculty: Create Clubs       | ✅      |
+| Admin/Faculty: Schedule Events    | ✅      |
+| Student: Join Clubs               | ✅      |
+| Admin: Delete Clubs               | ✅      |
+| Campus Events (Create/Register)   | ✅      |
+
+### 13. Announcements
+| Feature                            | Status |
+|------------------------------------|--------|
+| Admin/Faculty: Create Announcements | ✅     |
+| Target by Role/Department          | ✅      |
+| Scrolling Ticker on Dashboard      | ✅      |
+| Important Flag                     | ✅      |
+
+### 14. College Gallery & Magazines
+| Feature                           | Status |
+|-----------------------------------|--------|
+| Admin: Upload Gallery Photos      | ✅      |
+| Admin: Upload College Magazines   | ✅      |
+| Student Dashboard: View Gallery   | ✅      |
+| Student Dashboard: View Magazines | ✅      |
+
+### 15. Notification & Email Engine
+| Feature                                  | Status |
+|------------------------------------------|--------|
+| n8n Webhook Integration                  | ✅      |
+| Nodemailer SMTP Fallback                 | ✅      |
+| Welcome Email (Student/Faculty/Staff)    | ✅      |
+| Absent Alert Email                       | ✅      |
+| Low Attendance Warning Email             | ✅      |
+| Results Released Notification            | ✅      |
+| Exam Scheduled Notification              | ✅      |
+| Placement Drive Posted Notification      | ✅      |
+
+### 16. Service Requests
+| Feature                        | Status |
+|--------------------------------|--------|
+| Student: Raise Service Request | ✅      |
+| Faculty: Respond to Requests   | ✅      |
+| Status Tracking                | ✅      |
+
+### 17. Audit & Reporting
+| Feature                         | Status |
+|---------------------------------|--------|
+| Audit Log (All Actions Tracked) | ✅      |
+| Marks Reports (Filtered)        | ✅      |
+| Attendance Reports (Filtered)   | ✅      |
+
+---
+
+## Architecture Flow
+
+```
+Student/Faculty/Admin (Browser)
+        │
+        ▼
+  ┌─────────────┐     ┌──────────────┐
+  │  Next.js 14  │────▶│  NestJS API  │
+  │  (Vercel)    │     │  (Render)    │
+  └─────────────┘     └──────┬───────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+       ┌───────────┐  ┌───────────┐  ┌───────────┐
+       │ PostgreSQL │  │ Socket.io │  │ Nodemailer│
+       │ (Neon)     │  │ (WebRTC)  │  │ (Gmail)   │
+       └───────────┘  └───────────┘  └───────────┘
+```
+
+---
+
+## Marks Verification Pipeline
+
+```
+Faculty Uploads Marks (Mid1/Mid2/Internal/External)
+        │
+        ▼ Status: SUBMITTED
+Exam Cell Reviews & Verifies
+        │
+        ▼ Status: VERIFIED → LOCKED
+Exam Cell Publishes Results
+        │
+        ▼ Status: RELEASED
+Students View on Dashboard + Email Notification
+```
