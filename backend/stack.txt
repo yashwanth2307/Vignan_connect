@@ -1,0 +1,11 @@
+Error: EROFS: read-only file system, mkdir '/var/task/uploads'
+    at Object.mkdirSync (node:fs:1363:26)
+    at sync (/var/task/node_modules/mkdirp/index.js:74:13)
+    at mkdirP.sync (/var/task/node_modules/mkdirp/index.js:80:24)
+    at new DiskStorage (/var/task/node_modules/multer/storage/disk.js:21:12)
+    at module.exports (/var/task/node_modules/multer/storage/disk.js:65:10)
+    at Object.<anonymous> (/var/task/src/college-magazine/college-magazine.controller.js:66:43)
+    at Module.<anonymous> (/opt/rust/bytecode.js:2:1451)
+    at O.l._compile (/opt/rust/bytecode.js:2:3849)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)

@@ -1,0 +1,71 @@
+services:
+  # 1. NestJS Backend API
+  - type: web
+    name: vconnect-api
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    disk:
+      name: vconnect-uploads
+      mountPath: /opt/render/project/src/backend/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        sync: false # You will paste your Neon DB URL in the Render Dashboard
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: N8N_ENABLED
+        value: "true"
+      - key: N8N_WEBHOOK_URL
+        value: "https://vconnect-n8n.onrender.com/webhook"
+      - key: FRONTEND_URL
+        value: "https://vignan-connect.vercel.app"
+      - key: PORT
+        value: "4000"
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: vconnect-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: vconnect-redis
+          property: port
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+  # 2. Managed Redis Cache
+  - type: redis
+    name: vconnect-redis
+    ipAllowList: [] # only allow internal services
+
+  # 3. n8n Workflow Automation Engine
+  - type: web
+    name: vconnect-n8n
+    env: docker
+    image: n8nio/n8n:latest
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n
+      sizeGB: 1
+    envVars:
+      - key: WEBHOOK_URL
+        value: "https://vconnect-n8n.onrender.com"
+      - key: N8N_HOST
+        value: "vconnect-n8n.onrender.com"
+      - key: N8N_PORT
+        value: "5678"
+      - key: N8N_PROTOCOL
+        value: "https"
+      - key: EXECUTIONS_DATA_PRUNE
+        value: "true"
+      - key: EXECUTIONS_DATA_MAX_AGE
+        value: "168"

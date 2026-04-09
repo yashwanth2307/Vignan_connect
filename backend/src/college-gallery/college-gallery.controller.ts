@@ -23,7 +23,9 @@ export class CollegeGalleryController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './uploads/gallery',
+        destination: (req, file, cb) => {
+          cb(null, './uploads/gallery');
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `${uniqueSuffix}${extname(file.originalname)}`);

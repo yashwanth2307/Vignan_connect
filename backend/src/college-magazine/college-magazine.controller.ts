@@ -28,7 +28,9 @@ export class CollegeMagazineController {
       ],
       {
         storage: diskStorage({
-          destination: './uploads/magazines',
+          destination: (req, file, cb) => {
+            cb(null, './uploads/magazines');
+          },
           filename: (req, file, cb) => {
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
             cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
