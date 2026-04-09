@@ -323,7 +323,7 @@ export class UsersService {
     const password = dto.password || `staff@${dto.email.split('@')[0]}`;
     const passwordHash = await this.authService.hashPassword(password);
 
-    return this.prisma.user.create({
+    const result = await this.prisma.user.create({
       data: {
         name: dto.name,
         email: dto.email,
@@ -341,6 +341,14 @@ export class UsersService {
         createdAt: true,
       },
     });
+
+    // Send welcome email to TPO/Exam Cell staff
+    await this.webhooks.facultyCreated(
+      { name: result.name, email: result.email, faculty: { empId: result.role, department: { name: 'Administration' } } },
+      password,
+    );
+
+    return result;
   }
 
   async findAll(role?: UserRole) {

@@ -31,7 +31,7 @@ export class PlacementsController {
 
   @Post('drives')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TPO')
   @ApiOperation({ summary: 'Create placement drive' })
   async createDrive(@Req() req: any, @Body() dto: CreatePlacementDriveDto) {
     return this.service.createDrive(req.user.sub, dto);
@@ -45,7 +45,7 @@ export class PlacementsController {
 
   @Get('drives/stats')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TPO')
   @ApiOperation({ summary: 'Get placement statistics' })
   async getDriveStats() {
     return this.service.getDriveStats();
@@ -59,7 +59,7 @@ export class PlacementsController {
 
   @Patch('drives/:id/toggle')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TPO')
   @ApiOperation({ summary: 'Toggle drive active/inactive' })
   async toggleDriveActive(@Param('id') id: string) {
     return this.service.toggleDriveActive(id);
@@ -89,7 +89,7 @@ export class PlacementsController {
 
   @Patch('applications/:id/status')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TPO')
   @ApiOperation({ summary: 'Update application status (Admin)' })
   async updateApplicationStatus(
     @Param('id') id: string,

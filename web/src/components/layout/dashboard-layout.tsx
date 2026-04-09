@@ -72,8 +72,12 @@ const hodNav: NavItem[] = [
 
 const examCellNav: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard/exam-cell', icon: LayoutDashboard },
-    { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
+    { label: 'Exam Sessions', href: '/dashboard/exam-cell/sessions', icon: Calendar },
+    { label: 'Marks Verification', href: '/dashboard/exam-cell/evaluation', icon: ClipboardCheck },
+    { label: 'Results', href: '/dashboard/exam-cell/results', icon: Award },
+    { label: 'Hall Tickets', href: '/dashboard/exam-cell/scripts', icon: Ticket },
     { label: 'Subjects', href: '/dashboard/admin/subjects', icon: BookOpen },
+    { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
 ];
 
 const facultyNav: NavItem[] = [
