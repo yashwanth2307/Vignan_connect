@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
@@ -32,14 +32,7 @@ export default function LandingPage() {
   const [magazines, setMagazines] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  
-  const heroRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"]
-  });
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+
 
   useEffect(() => {
     api.get('/college-magazines').then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
@@ -110,8 +103,8 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* Hero Section */}
-      <section ref={heroRef} className={`relative min-h-[92vh] flex items-center overflow-hidden ${importantAnnouncements.length === 0 ? 'pt-16' : ''}`}>
-        <motion.div style={{ y: backgroundY }} className="absolute inset-0 z-0 scale-110 origin-top">
+      <section className={`relative min-h-[92vh] flex items-center overflow-hidden ${importantAnnouncements.length === 0 ? 'pt-16' : ''}`}>
+        <div className="absolute inset-0 z-0">
           <img src="/images/campus2.jpg" alt="VGNT Campus" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-blue-950/92 via-indigo-950/88 to-purple-950/80" />
           <motion.div 
@@ -124,11 +117,11 @@ export default function LandingPage() {
             transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }} 
             className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" 
           />
-        </motion.div>
+        </div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-20 py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div style={{ y: textY }} initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
+            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
               <motion.div 
                 animate={{ y: [0, -5, 0] }} 
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
