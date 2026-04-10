@@ -1,7 +1,5 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
@@ -32,9 +30,16 @@ export default function LandingPage() {
   const [magazines, setMagazines] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"]
+  });
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
   useEffect(() => {
-    // Optionally fetch public data
     api.get('/college-magazines').then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
     api.get('/college-gallery').then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
     api.get('/announcements').then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
@@ -43,7 +48,7 @@ export default function LandingPage() {
   const importantAnnouncements = announcements.filter(a => a.isImportant);
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))]">
+    <div className="min-h-screen bg-[hsl(var(--background))] overflow-x-hidden">
       {/* Red Scrolling Info Bar */}
       {importantAnnouncements.length > 0 && (
         <div className="bg-red-600 text-white font-semibold text-sm py-2 overflow-hidden flex whitespace-nowrap mt-16 z-40 relative">
@@ -76,7 +81,12 @@ export default function LandingPage() {
       `}</style>
 
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-[hsl(var(--border))] shadow-sm">
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className="fixed top-0 w-full z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-[hsl(var(--border))] shadow-sm"
+      >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white border-2 border-blue-100 shadow-sm flex items-center justify-center overflow-hidden">
@@ -88,35 +98,49 @@ export default function LandingPage() {
             </div>
           </div>
           <Link href="/login">
-            <Button variant="gradient" size="sm">
-              Staff / Student Login <ArrowRight className="w-4 h-4" />
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="gradient" size="sm">
+                  Staff / Student Login <ArrowRight className="w-4 h-4" />
+                </Button>
+            </motion.div>
           </Link>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
-      <section className={`relative min-h-[92vh] flex items-center overflow-hidden ${importantAnnouncements.length === 0 ? 'pt-16' : ''}`}>
-        <div className="absolute inset-0 z-0">
+      <section ref={heroRef} className={`relative min-h-[92vh] flex items-center overflow-hidden ${importantAnnouncements.length === 0 ? 'pt-16' : ''}`}>
+        <motion.div style={{ y: backgroundY }} className="absolute inset-0 z-0 scale-110 origin-top">
           <img src="/images/campus2.jpg" alt="VGNT Campus" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-blue-950/92 via-indigo-950/88 to-purple-950/80" />
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        </div>
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} 
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }} 
+            className="absolute top-20 left-10 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl" 
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }} 
+            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }} 
+            className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" 
+          />
+        </motion.div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-20 py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-20 h-20 rounded-full bg-white shadow-2xl flex items-center justify-center p-1">
+            <motion.div style={{ y: textY }} initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
+              <motion.div 
+                animate={{ y: [0, -5, 0] }} 
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
+                className="flex items-center gap-4 mb-8"
+              >
+                <div className="w-20 h-20 rounded-full bg-white shadow-2xl flex items-center justify-center p-1 relative">
                   <Image src="/images/logo.png" alt="Logo" width={64} height={64} className="rounded-full object-contain" />
                 </div>
                 <div>
                   <p className="text-blue-300 font-semibold text-sm tracking-widest uppercase">Vignan Institute of Technology & Science</p>
                   <p className="text-blue-400/60 text-xs mt-0.5">(Autonomous) | Deshmukhi, Hyderabad</p>
                 </div>
-              </div>
-              <h1 className="text-4xl lg:text-6xl font-black text-white leading-tight mb-6">
+              </motion.div>
+              <h1 className="text-4xl lg:text-6xl font-black text-white leading-tight mb-6 hidden-stagger">
                 Shaping Tomorrow&apos;s
                 <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   Engineers & Leaders
@@ -129,21 +153,32 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link href="/login">
-                  <Button variant="gradient" size="lg" className="text-lg px-8 py-6 shadow-2xl shadow-blue-500/25">
-                    V-Connect Portal <ArrowRight className="w-5 h-5" />
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button variant="gradient" size="lg" className="text-lg px-8 py-6 shadow-2xl shadow-blue-500/25 relative overflow-hidden group">
+                        <span className="relative z-10 flex items-center">V-Connect Portal <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" /></span>
+                        <div className="absolute inset-0 block bg-gradient-to-r from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Button>
+                  </motion.div>
                 </Link>
               </div>
-              <div className="mt-8 flex items-center gap-3 flex-wrap">
-                {['NBA Accredited', 'NAAC A+ Grade', 'AICTE Approved', 'Autonomous'].map((badge) => (
-                  <span key={badge} className="px-4 py-1.5 bg-white/10 rounded-full text-xs text-blue-200 border border-white/15 backdrop-blur-sm font-medium">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }}
+                className="mt-8 flex items-center gap-3 flex-wrap"
+              >
+                {['NBA Accredited', 'NAAC A+ Grade', 'AICTE Approved', 'Autonomous'].map((badge, i) => (
+                  <motion.span 
+                    key={badge} 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 + i * 0.1 }}
+                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.2)' }}
+                    className="px-4 py-1.5 bg-white/10 rounded-full text-xs text-blue-200 border border-white/15 backdrop-blur-sm font-medium cursor-default transition-colors"
+                  >
                     {badge}
-                  </span>
+                  </motion.span>
                 ))}
-              </div>
+              </motion.div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="hidden lg:block">
+            <motion.div style={{ y: textY }} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="hidden lg:block">
               <div className="relative">
                 <div className="absolute -top-6 -right-6 w-48 h-32 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
                   <img src="/images/campus1.jpg" alt="VGNT Campus" className="w-full h-full object-cover" />
