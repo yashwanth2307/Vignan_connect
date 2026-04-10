@@ -13,6 +13,7 @@ export class ClubsService {
   async createClub(data: {
     name: string;
     description?: string;
+    category?: string;
     coordinatorId: string;
   }) {
     const existing = await this.prisma.club.findUnique({

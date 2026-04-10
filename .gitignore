@@ -55,3 +55,5 @@ EventLog.dll
 # Misc
 *.log
 coverage/
+.vercel
+.env*.local

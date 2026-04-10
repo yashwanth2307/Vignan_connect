@@ -7,7 +7,7 @@
 ## SLIDE 1: TITLE SLIDE
 
 **V-CONNECT 2.0**
-*A Unified Campus Enterprise Resource Planning (ERP) System*
+*A Next-Generation Unified Smart Campus Platform*
 
 **Team:**
 - B. SRIMALLIKA (21891A05D9)
@@ -27,138 +27,116 @@
 
 **What Problem Are We Solving?**
 
-- Colleges still manage attendance, timetables, and academic records using **manual registers, spreadsheets, and WhatsApp groups**.
-- Faculty waste hours charting timetables that frequently **clash**.
-- Students have **zero real-time visibility** into attendance shortages.
-- Virtual learning relies on external tools requiring separate links and accounts.
+- Colleges still manage placements, exams, and academic records using **manual registers, disconnected portals, and spreadsheets**.
+- **Lack of Collaboration:** Virtual learning relies on external tools (Zoom/Google Meet) requiring separate links.
+- **Manual Examination Processes:** Generating hall tickets, distributing scripts, and releasing verified marks take weeks.
+- **Fragmented Communication:** Important absentee alerts and exam results rely on inefficient notice boards or WhatsApp.
 
 **Who Faces This Problem?**
-- College Administrators, Faculty, Students, HODs.
-
-**Real-World Example:**
-> "A faculty member was assigned to two sections at the same time slot, causing confusion for 120 students. Attendance records took weeks to reconcile manually."
+- College Administrators, Faculty, Students, TPOs, and the Exam Cell.
 
 ---
 
 ## SLIDE 3: SOLUTION OVERVIEW
 
 **Our Idea:**
-V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes core institutional workflows into a single unified platform.
+V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes every institutional workflow—from academics to placements—into a single unified ecosystem.
 
 **How It Solves The Problem:**
-- Automated **collision-free timetable generation** checking faculty availability instantly.
-- **Centralized Attendance Management** preventing proxy marking with precise session locks.
-- **In-app video classes** for seamless online education (built-in whiteboard and controls).
-- **Automated Semester Promotion**, gracefully archiving 8th-semester students to Alumni.
+- **Automated Communication:** Event-driven email engine (n8n + Nodemailer) alerts students on absences and newly uploaded results.
+- **End-to-End Exam Cell Pipeline:** Faculty enters marks digitally → Exam Cell verified securely → System publishes to student dashboards.
+- **TPO Placement Module:** Dedicated portals to track drives, student applications, and placement algorithms.
+- **Built-In Live Classes:** Native WebRTC video classrooms with interactive digital whiteboards.
 
-**Key Concept:** One platform, hierarchical roles (Admin, HOD, Faculty, Student), zero paper.
+**Key Concept:** One platform, hierarchical roles (Admin, HOD, Faculty, Student, TPO, Exam Cell), zero paper.
 
 ---
 
-## SLIDE 4: SYSTEM ARCHITECTURE / WORKFLOW
+## SLIDE 4: SYSTEM ARCHITECTURE
 
+```text
+                     ┌────────────────────────┐
+                     │      USERS             │
+                     │ Admin │ Faculty │ TPO  │
+                     └──────────┬─────────────┘
+                                │
+                                ▼
+                     ┌────────────────────────┐
+                     │   FRONTEND (Next.js)   │
+                     │   Vercel Deployment    │
+                     │   React + Tailwind CSS │
+                     └──────────┬─────────────┘
+                                │ REST API + WebSocket
+                                ▼
+         ┌──────────────────────┴─────────────────────┐
+         │                                            │
+         ▼                                            ▼
+┌─────────────────┐                          ┌─────────────────┐
+│ BACKEND (NestJS)│ ◀── Webhooks (HTTP) ──▶  │   n8n WORKFLOW  │
+│ Port 4000       │                          │   ENGINE        │
+│ Prisma ORM      │ ──▶ Nodemailer SMTP ──▶  │   Gmail (Auth)  │
+└────────┬────────┘                          └─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│   DATABASE      │
+│   PostgreSQL    │
+└─────────────────┘
 ```
-                    ┌────────────────────────┐
-                    │      USERS             │
-                    │ Admin│Faculty│Student  │
-                    └──────────┬─────────────┘
-                               │
-                               ▼
-                    ┌────────────────────────┐
-                    │   FRONTEND (Next.js)   │
-                    │   Vercel Cloud         │
-                    │   React + Tailwind CSS │
-                    │   shadcn/ui Components │
-                    └──────────┬─────────────┘
-                               │ REST API + WebSocket
-                               ▼
-                    ┌────────────────────────┐
-                    │   BACKEND (NestJS)     │
-                    │   Port 4000            │
-                    │   JWT Auth + RBAC      │
-                    │   Prisma ORM           │
-                    └──────────┬─────────────┘
-                               │
-                               ▼
-                    ┌────────────────────────┐
-                    │   DATABASE             │
-                    │   PostgreSQL           │
-                    │   Relational Schema    │
-                    └────────────────────────┘
-```
-
-**Flow:** User → Login → Role-based Dashboard → Perform Action → API Call → Backend Validates Guard → Database → Response → UI Updates
 
 ---
 
 ## SLIDE 5: SYSTEM REQUIREMENTS & TECHNOLOGIES
 
-### Hardware Requirements:
-- **Processor:** Intel Core i3 (or equivalent) and above
-- **RAM:** Minimum 4 GB (8 GB recommended for smooth running of backend & frontend servers locally)
-- **Storage:** 20 GB free disk space
-- **Network:** Active internet connection (minimum 2 Mbps for seamless online classroom integration)
-
-### Software Requirements:
-- **Operating System:** Windows 10/11, macOS, or Linux
-- **Web Browser:** Google Chrome, Mozilla Firefox, Safari, or Microsoft Edge (latest versions)
-- **Runtime Environment:** Node.js (v18 or higher)
-- **Package Manager:** npm or yarn
-- **Database:** PostgreSQL (Cloud/Local)
-- **Tools Supported:** VS Code, Git
-
 ### Technology Stack:
 | Category | Technology |
 |----------|-----------|
-| **Frontend** | Next.js 16, React 19, TypeScript |
-| **UI Library** | shadcn/ui, Tailwind CSS, Framer Motion |
-| **Backend** | NestJS 11, Node.js 18+ |
-| **ORM** | Prisma v6.5 |
-| **Database** | PostgreSQL |
+| **Frontend** | Next.js 14, React 18, Tailwind CSS, Framer Motion |
+| **Backend** | NestJS, Node.js, REST APIs |
+| **ORM** | Prisma v6 |
+| **Database** | PostgreSQL (Neon Tech) |
+| **Real-Time Video** | Peer-to-Peer WebRTC, Socket.io |
+| **Automation** | n8n Workflow Automation, Nodemailer |
 | **Authentication** | JWT (Access + Refresh tokens), bcrypt |
-| **Video** | Custom Built-In Classroom (WebRTC compatible) |
-| **Deployment** | Vercel (Frontend), Render/Railway (Backend) |
+| **Deployment** | Vercel (Front) & Render (Back + n8n) |
 
 ---
 
-## SLIDE 6: IMPLEMENTATION — CORE MODULES
+## SLIDE 6: IMPLEMENTATION — THE 5 PILLARS
 
 **How We Built It:**
 
-| Module | Description |
+| Pillar | Description |
 |--------|------------|
-| **1. Auth & RBAC** | JWT dual-token system + strict role-based guards (Admin, HOD, Faculty, Student) |
-| **2. Academic Setup** | Departments, Sections, Regulations, Subjects, Semesters — full CRUD capability |
-| **3. Timetable Engine** | Algorithm prevents collisions; checks faculty availability across ALL sections |
-| **4. Attendance Logic** | Session-based attendance tracking, Admin overrides, restricted editing windows |
-| **5. Semester Promotion** | Batch promotion of students across semesters, including automatic conversion to 'Alumni' at the 8th semester |
-| **6. Online Classes** | Custom in-app video classroom featuring screen sharing, faculty whiteboard, and "Mute All" host controls |
+| **1. Academic Base** | Timetable generation, Semester Promotion, Department CRUD |
+| **2. Exam Cell Engine** | Marks UI, Blind Script Evaluation tracking, Results Publishing, and Vignan-branded Digital HTML Hall Tickets |
+| **3. TPO Module** | Placement drive creation, Resume tracking, Application Status filtering, Analytics dashboard |
+| **4. Communication** | Central webhook engine triggering background emails for Welcome messages, Absent alerts, and Grades |
+| **5. Live Engagement** | Native WebRTC video classrooms and a functional 'Code Arena' for competitive programming |
 
 ---
 
-## SLIDE 7: UI SCREENS / DEMO
+## SLIDE 7: UI SCREENS / DEMO TO HIGHLIGHT
 
-**Screenshots to show:**
+**Screenshots/Flows to show in Demo:**
 
-1. **Login Page** — Gradient design with dynamic routing.
-2. **Admin Dashboard** — Overview cards showing total students, faculty, departments.
-3. **Timetable View** — Color-coded weekly grid with subject, faculty, and room info.
-4. **Attendance Registry** — Faculty marks entry grid highlighting session locks.
-5. **Admin Attendance Override** — High-privileged table to fix past attendance mistakes.
-6. **Online Classroom** — In-app video with host controls (Whiteboard & Mute).
-7. **Semester Promotion** — Migration tool moving students seamlessly across academic years.
+1. **V-Connect Authentication** — Dynamic login routing based on role (Student vs. TPO vs. Admin).
+2. **Student Dashboard** — Media-rich homepage featuring College Magazines, Photo Gallery, and Announcements ticker.
+3. **Printable Hall Tickets** — Showing the Vignan logo, Controller of Exams signature, and timetable columns.
+4. **Exam Cell Marks Ledger** — The interface where Exam Cell 'Verifies' faculty marks and hits 'Publish'.
+5. **TPO Analytics** — Dynamic charts displaying selection rates and average LPA.
+6. **Live WebRTC Classroom** — Split-screen showing the interactive faculty whiteboard syncing to students.
 
 ---
 
 ## SLIDE 8: KEY FEATURES
 
-✅ **Collision-Free Timetable** — Validates cross-section availability dynamically.
-✅ **Admin Attendance Overrides** — Strict security where only admins can unlock past records.
-✅ **Hierarchical Security** — Operations evaluated strictly via JWT + Role Guards.
-✅ **In-App Video Classes** — Custom classroom with Teacher controls (No Jitsi/Zoom dependency needed).
-✅ **Automated Alumni Conversion** — Final year data archiving perfectly structured.
-✅ **Dark/Light Mode** — Premium, responsive theme support across all pages.
-✅ **Mobile Responsive** — Dashboards operate perfectly on all screen sizes.
+✅ **V-Connect Live Classroom** — Built-in peer-to-peer mesh video with teacher privileges.
+✅ **Automated Event-Driven Emails** — System autonomous messaging without manual intervention.
+✅ **Secure Examination Pipeline** — Draft → Submitted → Verified → Locked → Released state structure.
+✅ **Smart Placement Operations** — Centralized portal eliminating manual student resume tracking.
+✅ **Competitive Code Arena** — In-app gamified environment boosting programming skills.
+✅ **Mobile Responsive Dark/Light Modes** — Flawless shadcn/ui integration across all pages.
 
 ---
 
@@ -166,57 +144,56 @@ V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes core i
 
 | Metric | Result |
 |--------|--------|
-| **Timetable Generation** | Zero faculty collisions allowed across multi-section configurations |
-| **API Response Time** | <200ms average latency for standard endpoints |
-| **Data Integrity** | Locked attendance sessions remain wholly uneditable to standard users |
-| **Role Security** | All hierarchy verified — unauthorized access attempts immediately blocked at the guard level |
+| **Communication Automation** | Over 10 distinct system actions now automatically generate instant email alerts. |
+| **Exam Transparency** | 100% digital trace of marks from initially uploaded by faculty to officially published. |
+| **Platform Ecosystem** | Completely replaced the need for Zoom (Classes), WhatsApp (Announcements), and Excel (Placements). |
+| **Role Security** | 6 hierarchical distinct user types rigorously separated by JWT Route Guards. |
 
-**Key Achievement:** *"Centralized disconnected collegiate operations into one highly-performant interface."*
+**Key Achievement:** *"Centralized highly complicated campus operations—from examinations to live teaching—into one flawless, robust interface."*
 
 ---
 
 ## SLIDE 10: COMPARISON — EXISTING vs V-CONNECT 2.0
 
-| Feature | Existing System | V-Connect 2.0 |
+| Feature | Existing Systems | V-Connect 2.0 |
 |---------|----------------|---------------|
-| Timetable | Manual (trial & error, hours) | Digitized (instant collision checking) |
-| Attendance | Paper registers, manual counting | Centralized digital DB with Admin Audit capabilities |
-| Online Learning | External links, fragmented platforms | Built-in video classroom with host privileges |
-| Data Progression | Manual database wiping | One-click Semester Promotion and Alumni archiving |
-| Security | Shared Excel passwords | Modern JWT + RBAC + bcrypt password hashing |
+| Timetable & Attendance | Paper registers, manual counting, clash errors | Centralized digital DB with algorithm validations |
+| Online Learning | External links (Zoom/Meet), expensive iframe limits | Native WebRTC with custom Socket.io signaling |
+| Examination Flow | Physical report cards, delayed manual updating | Instant publish pipelines + Printable Branded Hall Tickets |
+| Placement Tracking | Manual email threads, disjointed Excel databases | Unified TPO Dashboard with applicant state toggles |
+| Notifications | Notice Boards | Automated Nodemailer/n8n HTML email dispatches |
 
 ---
 
-## SLIDE 11: CHALLENGES FACED
+## SLIDE 11: CHALLENGES FACED & SOLUTIONS
 
 | Challenge | How We Solved It |
 |-----------|-----------------|
-| **Faculty Double-Booking** | Implemented cross-section availability algorithms in the timetable logic |
-| **Attendance Tampering** | Introduced strict `isLocked` Session Booleans bypassing only for Admins |
-| **Virtual Class Integration** | Engineered a Custom React Video component equipped with Host/Student conditionally rendered controls |
-| **JWT Token Expiration UX** | Developed silent auto-refresh token rotation in the frontend API client |
+| **Email Deliverability** | Configured a dual-system (n8n webhooks + Nodemailer fallback) to ensure critical alerts never fail. |
+| **Real-time Synchronization** | Engineered pure WebRTC + Socket.io connections for low latency whiteboard/video transmitting. |
+| **Complex Route Security** | Built advanced global `RolesGuards` checking database privileges on every API request. |
+| **Vercel Statelessness** | Adapted our file-upload logic to utilize efficient runtime temporary buffers to bypass Serverless limitations. |
 
 ---
 
 ## SLIDE 12: FUTURE SCOPE
 
-🔮 **Machine Learning Integration** — Analytics dashboard predicting student performance based on attendance.
-🔮 **External Integrations** — SMS/WhatsApp notifications on attendance shortages via Webhooks.
-🔮 **Mobile Native App** — Deploying React Native app using the same robust backend APIs.
-🔮 **Advanced Gamification** — Incorporating Code Arena, Skill points, and Hackathons natively.
+🔮 **Machine Learning Algorithms** — Predictive analytics for student risk based on attendance shortage and mock-test scores.
+🔮 **Integrated Payment Gateway** — For handling semester fees, placement registration fees, and fines.
+🔮 **Native Mobile Applicaton** — Expanding the Next.js PWA into an official React Native mobile application for Android/iOS.
+🔮 **Advanced Proctoring** — AI-based optical monitoring during Code Arena live contest mode.
 
 ---
 
 ## SLIDE 13: CONCLUSION
 
 **What We Achieved:**
-- Built a **complete, production-ready Campus ERP foundation** focusing on the most critical structural workflows.
-- Successfully digitized scheduling, attendance validation, and virtual classrooms.
-- Enforced **strict role-based security** ensuring data privacy across user tiers.
-- Delivered a **modern, fully-responsive dashboard UI** deployed live to Vercel.
+- We successfully developed an **enterprise-grade, production-ready Cloud ERP** capable of managing massive institutional data.
+- Built sophisticated architectural pipelines separating internal workflows (Faculty Upload → Exam Cell Publish).
+- Achieved **immense automation** by digitizing exams, live classes, placement workflows, and background notification alerts.
 
 **Impact:**
-> V-Connect 2.0 eliminates manual academic friction, establishing a clean, secure, and easily expansible digital infrastructure for the institution.
+> V-Connect 2.0 doesn't just manage data; it completely modernizes how administrators, faculty, and students interact—bringing Vignan Institute strictly into the digital-first era.
 
 ---
 
@@ -224,7 +201,7 @@ V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes core i
 
 # Thank You! 🙏
 
-**V-Connect 2.0 — Campus ERP System**
+**V-Connect 2.0 — Smart Campus Ecosystem**
 
 Team: B. Srimallika, M. Sathwik Reddy, P. Sai Nikhil, K. Akshaya
 Guide: Mrs. Avvaru R V Naga Suneetha

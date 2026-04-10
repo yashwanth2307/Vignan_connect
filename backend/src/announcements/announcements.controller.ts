@@ -25,8 +25,8 @@ export class AnnouncementsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('ADMIN', 'HOD')
-  @ApiOperation({ summary: 'Create announcement (Admin/HOD)' })
+  @Roles('ADMIN', 'HOD', 'TPO')
+  @ApiOperation({ summary: 'Create announcement (Admin/HOD/TPO)' })
   async create(@Req() req: any, @Body() dto: CreateAnnouncementDto) {
     return this.service.create(req.user.sub, dto);
   }
@@ -39,7 +39,7 @@ export class AnnouncementsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'HOD', 'TPO')
   @ApiOperation({ summary: 'Delete/deactivate announcement' })
   async delete(@Param('id') id: string) {
     return this.service.delete(id);

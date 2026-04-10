@@ -38,7 +38,7 @@ export class ClubsController {
   @Roles(UserRole.ADMIN, UserRole.HOD, UserRole.FACULTY)
   @ApiOperation({ summary: 'Create a new club' })
   createClub(
-    @Body() body: { name: string; description?: string; coordinatorId: string },
+    @Body() body: { name: string; description?: string; category?: string; coordinatorId: string },
   ) {
     return this.service.createClub(body);
   }
