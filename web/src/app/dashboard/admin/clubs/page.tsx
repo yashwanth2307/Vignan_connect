@@ -74,10 +74,10 @@ export default function AdminClubsPage() {
                     </h2>
                     <p className="text-[hsl(var(--muted-foreground))] mt-1">Manage student clubs and organizations</p>
                 </div>
+                <Button onClick={() => setOpen(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg">
+                    <Plus className="w-4 h-4 mr-2" /> Create Club
+                </Button>
                 <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild onClick={() => setOpen(true)}>
-                        <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"><Plus className="w-4 h-4 mr-2" /> Create Club</Button>
-                    </DialogTrigger>
                     <DialogContent>
                         <DialogHeader><DialogTitle>Create New Club</DialogTitle></DialogHeader>
                         <form onSubmit={createClub} className="space-y-4 pt-4">
