@@ -173,7 +173,7 @@ export default function LandingPage() {
               </motion.div>
             </motion.div>
 
-            <motion.div style={{ y: textY }} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="hidden lg:block">
+            <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="hidden lg:block">
               <div className="relative">
                 <div className="absolute -top-6 -right-6 w-48 h-32 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
                   <img src="/images/campus1.jpg" alt="VGNT Campus" className="w-full h-full object-cover" />
