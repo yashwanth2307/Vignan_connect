@@ -324,8 +324,12 @@ export class ExamService {
   }
 
   async releaseResults(semesterId: string) {
+    // Release marks from any non-draft state (SUBMITTED, VERIFIED, or LOCKED)
     const result = await this.prisma.marks.updateMany({
-      where: { semesterId, status: 'LOCKED' },
+      where: {
+        semesterId,
+        status: { in: ['SUBMITTED', 'VERIFIED', 'LOCKED'] },
+      },
       data: { status: 'RELEASED' },
     });
 

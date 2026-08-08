@@ -40,13 +40,30 @@ export class AttendanceService {
       orderBy: { rollNo: 'asc' },
     });
 
+    // Pre-fetch total CLOSED sessions per section to use as denominator.
+    // This ensures students with no record for a session are still counted
+    // (they are absent), matching the student portal's calculation.
+    const sectionIds = [...new Set(students.map((s) => s.sectionId))];
+    const closedSessionCounts = new Map<string, number>();
+
+    for (const secId of sectionIds) {
+      const count = await this.prisma.attendanceSession.count({
+        where: {
+          courseOffering: { sectionId: secId },
+          status: 'CLOSED',
+        },
+      });
+      closedSessionCounts.set(secId, count);
+    }
+
     // Calculate attendance percentage for each student
     return students.map((student) => {
-      // We could optionally filter sessions by the requested semesterId
-      // Here we just look at all records the student has historically
-      const records = student.attendanceRecords;
-      const totalSessions = records.length;
-      const presentCount = records.filter((r) => r.status === 'PRESENT').length;
+      // Only count records from CLOSED sessions
+      const closedRecords = student.attendanceRecords.filter(
+        (r) => r.attendanceSession.status === 'CLOSED',
+      );
+      const totalSessions = closedSessionCounts.get(student.sectionId) || 0;
+      const presentCount = closedRecords.filter((r) => r.status === 'PRESENT').length;
 
       const attendancePercentage =
         totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
@@ -230,7 +247,7 @@ export class AttendanceService {
   // ── Stop Session — and trigger low attendance alerts ──
   async stopSession(sessionId: string, userId: string) {
     const faculty = await this.prisma.faculty.findUnique({ where: { userId } });
-    if (!faculty) throw new ForbiddenException('Not a faculty');
+    if (!faculty) throw new ForbiddenException('Not a faculty member');
 
     const session = await this.prisma.attendanceSession.findUnique({
       where: { id: sessionId },
@@ -241,12 +258,14 @@ export class AttendanceService {
       },
     });
     if (!session) throw new NotFoundException('Session not found');
-    if (session.courseOffering.facultyId !== faculty.id)
-      throw new ForbiddenException('Not your session');
+
+    if (session.courseOffering.facultyId !== faculty.id) {
+      throw new ForbiddenException('You do not own this session');
+    }
 
     const closed = await this.prisma.attendanceSession.update({
       where: { id: sessionId },
-      data: { status: 'CLOSED' },
+      data: { status: 'CLOSED', isLocked: true },
     });
 
     // ── Trigger low attendance alerts (fire-and-forget) ──
@@ -257,6 +276,45 @@ export class AttendanceService {
     ).catch((err) => console.error('Low attendance check error:', err));
 
     return closed;
+  }
+
+  async updateSessionSummary(
+    sessionId: string,
+    data: {
+      topicCovered?: string;
+      summarizerStudentRollNo?: string;
+      summarizerStudentName?: string;
+    },
+    userId: string,
+  ) {
+    const session = await this.prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+      include: { courseOffering: true },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    const updated = await this.prisma.attendanceSession.update({
+      where: { id: sessionId },
+      data: {
+        topicCovered: data.topicCovered,
+        summarizerStudentRollNo: data.summarizerStudentRollNo,
+        summarizerStudentName: data.summarizerStudentName,
+      },
+    });
+
+    if (data.topicCovered && session.courseOffering) {
+      await this.prisma.topicsTaught.create({
+        data: {
+          courseOfferingId: session.courseOfferingId,
+          date: session.date,
+          hourIndex: session.hourIndex,
+          description: data.topicCovered,
+          facultyId: session.courseOffering.facultyId,
+        },
+      });
+    }
+
+    return updated;
   }
 
   // ── Check all students in a section for low attendance ──
@@ -327,7 +385,10 @@ export class AttendanceService {
 
   // ── Get Student Attendance Summary ──
   async getStudentAttendance(userId: string, courseOfferingId?: string) {
-    const student = await this.prisma.student.findUnique({ where: { userId } });
+    const student = await this.prisma.student.findUnique({
+      where: { userId },
+      include: { regulation: true },
+    });
     if (!student) throw new ForbiddenException('Not a student');
 
     const where: any = { studentId: student.id };
@@ -347,12 +408,25 @@ export class AttendanceService {
 
     // Calculate percentages per subject
     if (!courseOfferingId) {
+      // Filter course offerings by the student's current semester so that
+      // promoted students only see their new semester's subjects.
       const courseOfferings = await this.prisma.courseOffering.findMany({
-        where: { sectionId: student.sectionId },
-        include: { subject: true, attendanceSessions: true },
+        where: {
+          sectionId: student.sectionId,
+          subject: {
+            semesterNumber: student.currentSemester,
+          },
+        },
+        include: {
+          subject: true,
+          attendanceSessions: {
+            where: { status: 'CLOSED' }, // Only count closed sessions
+          },
+        },
       });
 
       const summary = courseOfferings.map((co) => {
+        // totalSessions now only includes CLOSED sessions
         const totalSessions = co.attendanceSessions.length;
         const attended = records.filter(
           (r) =>

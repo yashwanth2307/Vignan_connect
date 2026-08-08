@@ -14,6 +14,7 @@ export default function GalleryPage() {
 
     const [title, setTitle] = useState('');
     const [imageUrl, setImageUrl] = useState('');
+    const [file, setFile] = useState<File | null>(null);
     const [category, setCategory] = useState('General');
 
     const CATEGORIES = ['General', 'Sports', 'Cultural', 'Technical', 'Infrastructure'];
@@ -29,13 +30,17 @@ export default function GalleryPage() {
     useEffect(() => { load(); }, []);
 
     const handleCreate = async () => {
-        if (!imageUrl) return;
+        if (!file) return;
         setSaving(true);
         try {
-            await api.post('/college-gallery', {
-                title, imageUrl, category
+            const formData = new FormData();
+            formData.append('file', file);
+            if (title) formData.append('title', title);
+            formData.append('category', category);
+            await api.post('/college-gallery', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            setTitle(''); setImageUrl(''); setCategory('General');
+            setTitle(''); setFile(null); setImageUrl(''); setCategory('General');
             setShowForm(false);
             load();
         } catch (e: any) { alert(e.message); }
@@ -74,12 +79,11 @@ export default function GalleryPage() {
                                     type="file" 
                                     accept="image/*,video/*"
                                     onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        if (file.size > 3.5 * 1024 * 1024) return alert("File is too large! Maximum limit is 3.5MB.");
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => setImageUrl(reader.result as string);
-                                        reader.readAsDataURL(file);
+                                        const selectedFile = e.target.files?.[0];
+                                        if (!selectedFile) return;
+                                        if (selectedFile.size > 15 * 1024 * 1024) return alert("File is too large! Maximum limit is 15MB.");
+                                        setFile(selectedFile);
+                                        setImageUrl(URL.createObjectURL(selectedFile));
                                     }}
                                     className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
                                 />
@@ -100,7 +104,7 @@ export default function GalleryPage() {
                                 placeholder="E.g., Sports Day 2026 Winner" />
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="gradient" onClick={handleCreate} disabled={saving || !imageUrl}>
+                            <Button variant="gradient" onClick={handleCreate} disabled={saving || !file}>
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload Photo'}
                             </Button>
                             <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>

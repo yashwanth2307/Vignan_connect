@@ -57,6 +57,22 @@ export class AttendanceController {
     return this.service.stopSession(sessionId, req.user.sub);
   }
 
+  @Post('sessions/:sessionId/summary')
+  @Roles(UserRole.FACULTY, UserRole.HOD)
+  @ApiOperation({ summary: 'Save topics covered & summarizer student' })
+  async updateSessionSummary(
+    @Param('sessionId') sessionId: string,
+    @Body()
+    body: {
+      topicCovered?: string;
+      summarizerStudentRollNo?: string;
+      summarizerStudentName?: string;
+    },
+    @Req() req: any,
+  ) {
+    return this.service.updateSessionSummary(sessionId, body, req.user.sub);
+  }
+
   @Post('sessions/:sessionId/mark')
   @Roles(UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN)
   @ApiOperation({

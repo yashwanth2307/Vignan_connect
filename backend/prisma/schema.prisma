@@ -399,6 +399,9 @@ model AttendanceSession {
   status           SessionStatus  @default(ACTIVE)
   isLocked         Boolean        @default(false)
   remarks          String?
+  topicCovered     String?
+  summarizerStudentRollNo String?
+  summarizerStudentName   String?
 
   records AttendanceRecord[]
 
@@ -486,6 +489,9 @@ model Submission {
   fileUrl      String
   submittedAt  DateTime   @default(now())
   grade        String?
+  isFlagged    Boolean    @default(false)
+  remarks      String?
+  status       String     @default("SUBMITTED")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

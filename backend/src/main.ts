@@ -25,6 +25,7 @@ async function bootstrap() {
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(path.join(uploadsDir, 'gallery'))) fs.mkdirSync(path.join(uploadsDir, 'gallery'), { recursive: true });
   if (!fs.existsSync(path.join(uploadsDir, 'magazines'))) fs.mkdirSync(path.join(uploadsDir, 'magazines'), { recursive: true });
+  if (!fs.existsSync(path.join(uploadsDir, 'assignments'))) fs.mkdirSync(path.join(uploadsDir, 'assignments'), { recursive: true });
   app.use('/uploads', express.static(uploadsDir));
 
   // Global validation pipe

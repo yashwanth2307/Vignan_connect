@@ -16,6 +16,8 @@ export default function MagazinePage() {
     const [description, setDescription] = useState('');
     const [fileUrl, setFileUrl] = useState('');
     const [thumbnailUrl, setThumbnailUrl] = useState('');
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [thumbFile, setThumbFile] = useState<File | null>(null);
 
     const load = async () => {
         try {
@@ -28,13 +30,18 @@ export default function MagazinePage() {
     useEffect(() => { load(); }, []);
 
     const handleCreate = async () => {
-        if (!title || !fileUrl) return;
+        if (!title || !pdfFile) return;
         setSaving(true);
         try {
-            await api.post('/college-magazines', {
-                title, description, fileUrl, thumbnailUrl
+            const formData = new FormData();
+            formData.append('file', pdfFile);
+            if (thumbFile) formData.append('thumbnail', thumbFile);
+            formData.append('title', title);
+            if (description) formData.append('description', description);
+            await api.post('/college-magazines', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            setTitle(''); setDescription(''); setFileUrl(''); setThumbnailUrl('');
+            setTitle(''); setDescription(''); setPdfFile(null); setThumbFile(null); setFileUrl(''); setThumbnailUrl('');
             setShowForm(false);
             load();
         } catch (e: any) { alert(e.message); }
@@ -81,32 +88,30 @@ export default function MagazinePage() {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
-                                        if (file.size > 5 * 1024 * 1024) return alert("File is too large! Maximum limit is 5MB.");
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => setFileUrl(reader.result as string);
-                                        reader.readAsDataURL(file);
+                                        if (file.size > 25 * 1024 * 1024) return alert("File is too large! Maximum limit is 25MB.");
+                                        setPdfFile(file);
+                                        setFileUrl(file.name);
                                     }}
                                     className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
                                 />
-                                {fileUrl && <p className="text-xs text-green-500 mt-1">✓ PDF attached successfully</p>}
+                                {fileUrl && <p className="text-xs text-green-500 mt-1">✓ PDF attached: {fileUrl}</p>}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-sm font-medium">Upload Cover Image (Thumbnail) *</label>
+                            <label className="text-sm font-medium">Upload Cover Image (Thumbnail)</label>
                             <input 
                                 type="file" 
                                 accept="image/*"
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (!file) return;
-                                    if (file.size > 2 * 1024 * 1024) return alert("Image is too large! Maximum limit is 2MB.");
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => setThumbnailUrl(reader.result as string);
-                                    reader.readAsDataURL(file);
+                                    if (file.size > 10 * 1024 * 1024) return alert("Image is too large! Maximum limit is 10MB.");
+                                    setThumbFile(file);
+                                    setThumbnailUrl(file.name);
                                 }}
                                 className="flex h-10 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold flex items-center file:bg-[hsl(var(--primary))] file:text-white"
                             />
-                            {thumbnailUrl && <p className="text-xs text-green-500 mt-1">✓ Cover image attached successfully</p>}
+                            {thumbnailUrl && <p className="text-xs text-green-500 mt-1">✓ Cover image attached: {thumbnailUrl}</p>}
                         </div>
                         <div className="space-y-1">
                             <label className="text-sm font-medium">Description</label>
@@ -115,7 +120,7 @@ export default function MagazinePage() {
                                 placeholder="Short description of this issue..." />
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="gradient" onClick={handleCreate} disabled={saving || !title || !fileUrl}>
+                            <Button variant="gradient" onClick={handleCreate} disabled={saving || !title || !pdfFile}>
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Publish Issue'}
                             </Button>
                             <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>

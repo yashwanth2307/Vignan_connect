@@ -18,13 +18,12 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Announcements')
 @Controller('announcements')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class AnnouncementsController {
   constructor(private service: AnnouncementsService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('ADMIN', 'HOD', 'TPO')
   @ApiOperation({ summary: 'Create announcement (Admin/HOD/TPO)' })
   async create(@Req() req: any, @Body() dto: CreateAnnouncementDto) {
@@ -32,13 +31,14 @@ export class AnnouncementsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all announcements for current user role' })
-  async findAll(@Req() req: any, @Query('role') role?: string) {
-    return this.service.findAll(role || req.user.role);
+  @ApiOperation({ summary: 'Get all announcements (public)' })
+  async findAll(@Query('role') role?: string) {
+    return this.service.findAll(role);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('ADMIN', 'HOD', 'TPO')
   @ApiOperation({ summary: 'Delete/deactivate announcement' })
   async delete(@Param('id') id: string) {

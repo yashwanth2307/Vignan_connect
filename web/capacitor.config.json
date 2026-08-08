@@ -1,0 +1,9 @@
+{
+  "appId": "com.vignan.connect",
+  "appName": "V-Connect",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

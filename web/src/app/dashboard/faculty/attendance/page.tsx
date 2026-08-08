@@ -37,6 +37,13 @@ function AttendanceContent() {
     const [saving, setSaving] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
+    // Summary modal states
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [topicCovered, setTopicCovered] = useState('');
+    const [summarizerRollNo, setSummarizerRollNo] = useState('');
+    const [summarizerName, setSummarizerName] = useState('');
+    const [savingSummary, setSavingSummary] = useState(false);
+
     useEffect(() => {
         api.get<any[]>('/course-offerings/my').then(data => {
             setOfferings(data);
@@ -58,6 +65,10 @@ function AttendanceContent() {
             studentsList.forEach((s: any) => { defaultMap[s.id] = 'PRESENT'; });
             setAttendanceMap(defaultMap);
             setSubmitted(false);
+            setShowSummaryModal(false);
+            setTopicCovered('');
+            setSummarizerRollNo('');
+            setSummarizerName('');
         } catch (err: any) {
             alert(err.message);
         }
@@ -93,9 +104,24 @@ function AttendanceContent() {
             }));
             await api.post(`/attendance/sessions/${session.id}/mark`, { records });
             await api.post(`/attendance/sessions/${session.id}/stop`);
-            setSubmitted(true);
+            setShowSummaryModal(true);
         } catch (err: any) { alert(err.message); }
         setSaving(false);
+    };
+
+    const handleSaveSummary = async () => {
+        if (!session) return;
+        setSavingSummary(true);
+        try {
+            await api.post(`/attendance/sessions/${session.id}/summary`, {
+                topicCovered,
+                summarizerStudentRollNo: summarizerRollNo,
+                summarizerStudentName: summarizerName,
+            });
+            setShowSummaryModal(false);
+            setSubmitted(true);
+        } catch (err: any) { alert(err.message); }
+        setSavingSummary(false);
     };
 
     const resetSession = () => {
@@ -103,6 +129,7 @@ function AttendanceContent() {
         setStudents([]);
         setAttendanceMap({});
         setSubmitted(false);
+        setShowSummaryModal(false);
     };
 
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
@@ -113,6 +140,68 @@ function AttendanceContent() {
                 <h2 className="text-2xl font-bold">Mark Attendance</h2>
                 <p className="text-[hsl(var(--muted-foreground))]">Click each student to cycle: Present → Absent → Late → OD → Medical Leave</p>
             </div>
+
+            {/* Class Summary & Topics Covered Pop-up Modal */}
+            {showSummaryModal && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-2xl border space-y-4">
+                        <div className="flex items-center justify-between border-b pb-3">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Class Summary</h3>
+                            <Badge variant="outline" className="text-blue-600">Period {session?.hourIndex}</Badge>
+                        </div>
+                        <p className="text-xs text-[hsl(var(--muted-foreground))]">Attendance saved! Please record the topics taught and student summarizer for this session.</p>
+                        
+                        <div className="space-y-3">
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium">Topics Covered in Class *</label>
+                                <textarea
+                                    value={topicCovered}
+                                    onChange={e => setTopicCovered(e.target.value)}
+                                    placeholder="e.g. Unit 3: Dynamic Programming & Matrix Multiplication"
+                                    className="w-full h-24 rounded-xl border border-[hsl(var(--input))] bg-transparent p-3 text-sm"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium">Summarizer Roll No</label>
+                                    <input
+                                        type="text"
+                                        value={summarizerRollNo}
+                                        onChange={e => {
+                                            const rNo = e.target.value;
+                                            setSummarizerRollNo(rNo);
+                                            const matchedStudent = students.find(s => s.rollNo?.toLowerCase() === rNo.trim().toLowerCase());
+                                            if (matchedStudent) setSummarizerName(matchedStudent.user?.name || '');
+                                        }}
+                                        placeholder="e.g. 23891A0501"
+                                        className="w-full h-10 rounded-xl border border-[hsl(var(--input))] bg-transparent px-3 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium">Student Name</label>
+                                    <input
+                                        type="text"
+                                        value={summarizerName}
+                                        onChange={e => setSummarizerName(e.target.value)}
+                                        placeholder="Summarizer Name"
+                                        className="w-full h-10 rounded-xl border border-[hsl(var(--input))] bg-transparent px-3 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <Button onClick={handleSaveSummary} disabled={savingSummary} variant="gradient" className="flex-1">
+                                {savingSummary ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Finish'}
+                            </Button>
+                            <Button onClick={() => { setShowSummaryModal(false); setSubmitted(true); }} variant="outline">
+                                Skip
+                            </Button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {!session ? (
                 <Card>
