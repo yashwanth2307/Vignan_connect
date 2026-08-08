@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/lib/api';
+import { InstallAppBanner } from '@/components/install-app-banner';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -70,7 +71,9 @@ export default function LoginPage() {
 
 
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex flex-col">
+            <InstallAppBanner />
+            <div className="flex-1 flex">
             {/* Left: Campus Photo Background */}
             <motion.div
                 initial={{ opacity: 0, x: -50 }}
@@ -271,6 +274,7 @@ export default function LoginPage() {
                     </AnimatePresence>
                 </div>
             </motion.div>
+            </div>
         </div>
     );
 }
