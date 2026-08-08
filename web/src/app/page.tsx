@@ -36,9 +36,10 @@ export default function LandingPage() {
 
 
   useEffect(() => {
-    api.get('/college-magazines', { skipAuth: true }).then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
-    api.get('/college-gallery', { skipAuth: true }).then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
-    api.get('/announcements', { skipAuth: true }).then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    fetch(`${baseUrl}/college-magazines`).then(r => r.ok ? r.json() : []).then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
+    fetch(`${baseUrl}/college-gallery`).then(r => r.ok ? r.json() : []).then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
+    fetch(`${baseUrl}/announcements`).then(r => r.ok ? r.json() : []).then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
   }, []);
 
   const importantAnnouncements = announcements.filter(a => a.isImportant);
