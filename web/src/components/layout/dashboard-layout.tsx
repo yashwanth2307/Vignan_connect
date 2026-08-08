@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getInitials } from '@/lib/utils';
 import api from '@/lib/api';
+import { InstallAppBanner } from '@/components/install-app-banner';
 
 interface NavItem {
     label: string;
@@ -307,6 +308,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             {/* Main */}
             <div className="flex-1 flex flex-col overflow-hidden">
+                <InstallAppBanner />
                 {/* Top Bar */}
                 <header className="h-16 border-b border-[hsl(var(--border)/0.5)] bg-[hsl(var(--card)/0.8)] backdrop-blur-xl flex items-center justify-between px-4 lg:px-6 z-10">
                     <div className="flex items-center gap-3">

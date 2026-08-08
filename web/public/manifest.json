@@ -1,8 +1,10 @@
 {
-  "name": "V-Connect | Vignan Institute of Technology and Science",
+  "id": "/",
+  "name": "V-Connect Mobile App",
   "short_name": "V-Connect",
   "description": "College ERP, LMS & Attendance Mobile App for Vignan Institute of Technology and Science",
-  "start_url": "/login",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",

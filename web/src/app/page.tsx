@@ -12,6 +12,7 @@ import {
   Layers, Star, Download, Sparkles, BookOpen as BookIcon, Calendar, Camera
 } from 'lucide-react';
 import api from '@/lib/api';
+import { InstallAppBanner } from '@/components/install-app-banner';
 
 const departments = [
   { name: 'Computer Science & Engineering', code: 'CSE', students: '480+', sections: 4, color: 'from-blue-500 to-blue-600' },
@@ -44,6 +45,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] overflow-x-hidden">
+      <InstallAppBanner />
       {/* Red Scrolling Info Bar */}
       {importantAnnouncements.length > 0 && (
         <div className="bg-red-600 text-white font-semibold text-sm py-2 overflow-hidden flex whitespace-nowrap mt-16 z-40 relative">
