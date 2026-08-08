@@ -119,14 +119,11 @@ export default function OnlineClassesPage() {
         setMeetingLink(cls.meetingLink || '');
         setCourseOfferingId(cls.courseOfferingId || '');
         
-        // Format date for datetime-local input
+        // Format date for datetime-local input (converting to local timezone string YYYY-MM-DDTHH:mm)
         const d = new Date(cls.scheduledAt);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        setScheduledAt(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+        setScheduledAt(localISOTime);
         
         setDurationMinutes(cls.durationMinutes?.toString() || '60');
         setEditingClassId(cls.id);

@@ -61,8 +61,14 @@ export function PushNotificationManager() {
       }
 
       // Fetch VAPID key from backend
-      const res = await api.get('/push/vapid-key', { skipAuth: true });
-      const vapidPublicKey = res.data?.publicKey || 'BKmTKAFEr-D7jN6TmfcY96-XYla86BARvpO7OL9cASh_cerAPB1s2_Jc-3SUI3bmikCxmSg__TBYyFkpCNGb2pU';
+      let vapidPublicKey = 'BKmTKAFEr-D7jN6TmfcY96-XYla86BARvpO7OL9cASh_cerAPB1s2_Jc-3SUI3bmikCxmSg__TBYyFkpCNGb2pU';
+      try {
+        const res: any = await api.get('/push/vapid-key', { skipAuth: true });
+        if (res?.publicKey) vapidPublicKey = res.publicKey;
+        else if (res?.data?.publicKey) vapidPublicKey = res.data.publicKey;
+      } catch (e) {
+        console.warn('Using fallback VAPID key');
+      }
 
       const reg = await navigator.serviceWorker.ready;
       const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
