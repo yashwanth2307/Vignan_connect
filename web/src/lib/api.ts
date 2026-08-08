@@ -75,7 +75,9 @@ class ApiClient {
                 return retryRes.json();
             } else {
                 this.clearTokens();
-                if (typeof window !== 'undefined') window.location.href = '/login';
+                if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+                    window.location.href = '/login';
+                }
                 throw new Error('Session expired');
             }
         }
