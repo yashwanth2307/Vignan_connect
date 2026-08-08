@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/lib/api';
-import { InstallAppBanner } from '@/components/install-app-banner';
+import { InstallAppBanner, InstallAppButton } from '@/components/install-app-banner';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -211,6 +211,11 @@ export default function LoginPage() {
                                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}
                                 </Button>
                             </form>
+
+                            <div className="mt-6 pt-4 border-t border-[hsl(var(--border))] text-center">
+                                <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2 font-medium">Want to use V-Connect as a Mobile App?</p>
+                                <InstallAppButton className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-2.5 rounded-xl shadow flex items-center justify-center gap-2 text-sm transition-all" />
+                            </div>
                         </CardContent>
                     </Card>
 
