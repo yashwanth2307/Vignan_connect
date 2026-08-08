@@ -36,9 +36,9 @@ export default function LandingPage() {
 
 
   useEffect(() => {
-    api.get('/college-magazines').then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
-    api.get('/college-gallery').then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
-    api.get('/announcements').then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
+    api.get('/college-magazines', { skipAuth: true }).then(res => setMagazines(Array.isArray(res) ? res : [])).catch(() => {});
+    api.get('/college-gallery', { skipAuth: true }).then(res => setGallery(Array.isArray(res) ? res : [])).catch(() => {});
+    api.get('/announcements', { skipAuth: true }).then(res => setAnnouncements(Array.isArray(res) ? res : [])).catch(() => {});
   }, []);
 
   const importantAnnouncements = announcements.filter(a => a.isImportant);
