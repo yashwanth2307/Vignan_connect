@@ -1,17 +1,6 @@
-const CACHE_NAME = 'v-connect-cache-v1';
-const urlsToCache = [
-  '/',
-  '/login',
-  '/favicon.png',
-  '/images/logo.png',
-];
+const CACHE_NAME = 'v-connect-v3';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
-  );
   self.skipWaiting();
 });
 
@@ -31,7 +20,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  // Pass through all API requests & navigation directly to network
+  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
