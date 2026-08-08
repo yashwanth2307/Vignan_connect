@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import api from '@/lib/api';
 
 export type UserRole = 'ADMIN' | 'HOD' | 'FACULTY' | 'STUDENT' | 'EXAM_CELL' | 'TPO';
@@ -43,8 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const pathname = usePathname();
 
-    const refreshUser = useCallback(async () => {
+    const refreshUser = useCallback(async (currentPath: string) => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) {
@@ -53,10 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
             // Only validate token against server if on a protected dashboard route
-            // On public pages, just trust the token exists without making an API call
-            const isOnDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+            // On public pages (/, /login), skip API call entirely — no redirect
+            const isOnDashboard = currentPath.startsWith('/dashboard');
             if (!isOnDashboard) {
-                // On public pages, set loading false but don't redirect anywhere
                 setLoading(false);
                 return;
             }
@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        refreshUser();
-    }, [refreshUser]);
+        refreshUser(pathname);
+    }, [refreshUser, pathname]);
 
     const login = async (email: string, password: string) => {
         const data = await api.post<{ user: User; tokens: { accessToken: string; refreshToken: string } }>(
