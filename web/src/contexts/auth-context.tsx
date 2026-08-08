@@ -52,6 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setLoading(false);
                 return;
             }
+            // Only validate token against server if on a protected dashboard route
+            // On public pages, just trust the token exists without making an API call
+            const isOnDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+            if (!isOnDashboard) {
+                // On public pages, set loading false but don't redirect anywhere
+                setLoading(false);
+                return;
+            }
             const userData = await api.get<User>('/auth/me');
             setUser(userData);
         } catch {
