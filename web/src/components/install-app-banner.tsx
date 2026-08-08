@@ -5,13 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Download, Smartphone, X, Monitor, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+function getIsStandalone(): boolean {
+    if (typeof window === 'undefined') return false;
+    // Check display-mode: standalone (Android/Desktop PWA)
+    const mq = window.matchMedia('(display-mode: standalone)');
+    if (mq.matches) return true;
+    // Check iOS standalone mode
+    if ((navigator as any).standalone === true) return true;
+    // Check if launched from TWA (Android Trusted Web Activity)
+    if (document.referrer.includes('android-app://')) return true;
+    return false;
+}
+
 export function useInstallApp() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isIOS, setIsIOS] = useState(false);
+    const [isStandalone, setIsStandalone] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
+
+        setIsStandalone(getIsStandalone());
 
         const userAgent = window.navigator.userAgent.toLowerCase();
         setIsIOS(/iphone|ipad|ipod/.test(userAgent));
@@ -37,11 +52,14 @@ export function useInstallApp() {
         setShowModal(true);
     };
 
-    return { triggerInstall, isIOS, showModal, setShowModal };
+    return { triggerInstall, isIOS, isStandalone, showModal, setShowModal };
 }
 
 export function InstallAppButton({ className }: { className?: string }) {
-    const { triggerInstall, isIOS, showModal, setShowModal } = useInstallApp();
+    const { triggerInstall, isIOS, isStandalone, showModal, setShowModal } = useInstallApp();
+
+    // Hide install button if already installed as PWA
+    if (isStandalone) return null;
 
     return (
         <>
@@ -107,10 +125,11 @@ export function InstallAppButton({ className }: { className?: string }) {
 }
 
 export function InstallAppBanner() {
-    const { triggerInstall, isIOS, showModal, setShowModal } = useInstallApp();
+    const { triggerInstall, isIOS, isStandalone, showModal, setShowModal } = useInstallApp();
     const [dismissed, setDismissed] = useState(false);
 
-    if (dismissed) return null;
+    // Hide banner if already installed as PWA or dismissed
+    if (isStandalone || dismissed) return null;
 
     return (
         <>

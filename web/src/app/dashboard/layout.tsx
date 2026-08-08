@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PushNotificationManager } from '@/components/push-notification-manager';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -29,5 +30,10 @@ export default function DashboardRootLayout({ children }: { children: React.Reac
 
     if (!user) return null;
 
-    return <DashboardLayout>{children}</DashboardLayout>;
+    return (
+        <>
+            <DashboardLayout>{children}</DashboardLayout>
+            <PushNotificationManager />
+        </>
+    );
 }

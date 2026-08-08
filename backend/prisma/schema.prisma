@@ -128,6 +128,7 @@ model User {
   requestsReceived    ServiceRequest[]  @relation("requestTo")
   magazines           CollegeMagazine[]
   galleryPhotos       CollegeGallery[]
+  pushSubscriptions   PushSubscription[]
 
   @@map("users")
 }
@@ -709,6 +710,19 @@ model Announcement {
   @@index([targetRole])
   @@index([createdById])
   @@map("announcements")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 // ──────────────────────────────────────────

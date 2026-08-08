@@ -31,3 +31,50 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Push Notification Handler
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const title = data.title || 'V-Connect Announcement';
+    const options = {
+      body: data.body || '',
+      icon: data.icon || '/favicon.png',
+      badge: data.badge || '/favicon.png',
+      data: {
+        url: data.url || '/dashboard/student',
+      },
+      vibrate: [100, 50, 100],
+      tag: 'vconnect-announcement',
+      renotify: true,
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (err) {
+    console.error('Error handling push event:', err);
+  }
+});
+
+// Notification Click Handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlToOpen = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/dashboard/student';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(urlToOpen);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+

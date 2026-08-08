@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookService } from '../webhooks/webhook.service';
+import { PushService } from '../push/push.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class AnnouncementsService {
   constructor(
     private prisma: PrismaService,
     private webhooks: WebhookService,
+    private pushService: PushService,
   ) {}
 
   async create(userId: string, dto: CreateAnnouncementDto) {
@@ -28,6 +30,20 @@ export class AnnouncementsService {
       ...announcement,
       createdBy: announcement.createdBy.name,
     });
+
+    // Trigger in-app Web Push notification to target users
+    try {
+      await this.pushService.sendToAll(
+        {
+          title: `📢 ${announcement.title}`,
+          body: announcement.message,
+          url: '/dashboard/student',
+        },
+        announcement.targetRole,
+      );
+    } catch (e) {
+      console.error('Failed to dispatch web push notification:', e);
+    }
 
     return announcement;
   }

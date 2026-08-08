@@ -29,6 +29,7 @@ import { CollegeMagazineModule } from './college-magazine/college-magazine.modul
 import { CollegeGalleryModule } from './college-gallery/college-gallery.module';
 import { EventsModule } from './events/events.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { PushModule } from './push/push.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
     RedisModule,
     WebhookModule,
     EmailModule,
+    PushModule,
     AuthModule,
     UsersModule,
     DepartmentsModule,
