@@ -147,7 +147,9 @@ export default function LoginPage() {
                                 </div>
                                 <span className="font-bold text-lg">V-Connect</span>
                             </div>
-                            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+                            </div>
                             <CardDescription>Enter your credentials to access your dashboard</CardDescription>
                         </CardHeader>
                         <CardContent>

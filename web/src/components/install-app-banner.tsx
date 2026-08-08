@@ -7,23 +7,22 @@ import { motion } from 'framer-motion';
 
 export function InstallAppBanner() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [showBanner, setShowBanner] = useState(false);
+    const [showBanner, setShowBanner] = useState(true);
     const [isIOS, setIsIOS] = useState(false);
     const [showIOSModal, setShowIOSModal] = useState(false);
 
     useEffect(() => {
         // Check if already running in standalone mode (installed app)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-        if (isStandalone) return;
+        const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone);
+        if (isStandalone) {
+            setShowBanner(false);
+            return;
+        }
 
         // Detect iOS
         const userAgent = window.navigator.userAgent.toLowerCase();
         const ios = /iphone|ipad|ipod/.test(userAgent);
         setIsIOS(ios);
-
-        if (ios) {
-            setShowBanner(true);
-        }
 
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
