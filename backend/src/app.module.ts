@@ -31,9 +31,18 @@ import { EventsModule } from './events/events.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { PushModule } from './push/push.module';
 
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 100, // 100 requests per minute limit
+      },
+    ]),
     PrismaModule,
     RedisModule,
     WebhookModule,
@@ -64,6 +73,12 @@ import { PushModule } from './push/push.module';
     CollegeGalleryModule,
     EventsModule,
     AssignmentsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

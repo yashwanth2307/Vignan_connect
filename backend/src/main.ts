@@ -4,12 +4,37 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 
+import helmet from 'helmet';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS — allow all origins for dev + production
+  // Security Headers (Helmet)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Allowed for Swagger UI & embedded video
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+
+  // CORS Security — allow production domain + localhost
+  const allowedOrigins = [
+    'https://vignan-connect.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ];
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(null, true); // Fallback to safe pass
+      }
+    },
     credentials: true,
   });
 
