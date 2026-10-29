@@ -9,7 +9,7 @@
 **V-CONNECT 2.0**
 *A Next-Generation Unified Smart Campus Platform*
 
-**Guide:** Sri Anjaneyalu
+**Guide:** Mr. V S S P L N Balaji Lanka
 
 **College:** Vignan Institute of Technology And Science, Deshmukhi
 **Department:** Computer Science & Engineering
@@ -197,7 +197,7 @@ V-Connect 2.0 is a **cloud-native, full-stack Campus ERP** that digitizes every 
 
 **V-Connect 2.0 — Smart Campus Ecosystem**
 
-Team: Billapati Yashwanth Reddy, Haneef Mohammad, Kanakala Saikumar, Asima Firdose
-Guide: Sri Anjaneyalu
+Team: Mohammad saniya, Billapati Yashwanth Reddy, K. Vivekananda reddy, Kanakala Saikumar
+Guide: Mr. V S S P L N Balaji Lanka
 
 *Ready for Questions!*

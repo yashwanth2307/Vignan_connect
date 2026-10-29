@@ -104,4 +104,29 @@ export class ClassroomGateway implements OnGatewayConnection, OnGatewayDisconnec
   handleWhiteboardState(client: Socket, payload: { roomName: string; isOpen: boolean }) {
     client.to(payload.roomName).emit('whiteboard-state', payload.isOpen);
   }
+
+  @SubscribeMessage('admin-mute-all')
+  handleMuteAll(client: Socket, payload: { roomName: string }) {
+    client.to(payload.roomName).emit('admin-mute-all');
+  }
+
+  @SubscribeMessage('admin-mute-user')
+  handleMuteUser(client: Socket, payload: { roomName: string; targetId: string }) {
+    this.server.to(payload.targetId).emit('admin-mute-user');
+  }
+
+  @SubscribeMessage('admin-toggle-chat')
+  handleToggleChat(client: Socket, payload: { roomName: string; disabled: boolean }) {
+    client.to(payload.roomName).emit('admin-toggle-chat', payload.disabled);
+  }
+
+  @SubscribeMessage('admin-kick-user')
+  handleKickUser(client: Socket, payload: { roomName: string; targetId: string }) {
+    this.server.to(payload.targetId).emit('admin-kick-user');
+  }
+
+  @SubscribeMessage('screen-share-state')
+  handleScreenShareState(client: Socket, payload: { roomName: string; isSharing: boolean; userName: string }) {
+    client.to(payload.roomName).emit('screen-share-state', payload);
+  }
 }
