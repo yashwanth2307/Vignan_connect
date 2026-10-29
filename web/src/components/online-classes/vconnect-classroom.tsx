@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Mic, MicOff, Camera, CameraOff, Monitor, MonitorOff,
     MessageCircle, Users, Send, Maximize2, X, PenTool, VolumeX,
-    CircleDot, Ban, MessageSquareOff, Trash2, CheckCircle2
+    CircleDot, Ban, MessageSquareOff, Trash2
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
@@ -16,22 +16,88 @@ interface Props {
     isHost?: boolean | null;
 }
 
-// Global Google & Cloudflare STUN / TURN servers for NAT & campus firewall bypass
+// STUN servers for NAT Traversal
 const RTC_CONFIG: RTCConfiguration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:global.stun.twilio.com:3478' }
-    ],
-    iceCandidatePoolSize: 10,
-    bundlePolicy: 'max-bundle'
+        { urls: 'stun:stun.cloudflare.com:3478' }
+    ]
 };
 
-const WS_SERVER = process.env.NEXT_PUBLIC_WS_URL || (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '') : '') || 'http://localhost:4000';
+// Hardcoded live Render backend to eliminate any Vercel env-var missing issues
+const WS_SERVER = 'https://vignan-connect.onrender.com';
+
+// Subcomponent to reliably attach stream to HTML5 video element with audio playback
+function RemoteParticipantTile({
+    peerId,
+    participant,
+    stream,
+    isHost,
+    onMute,
+    onKick
+}: {
+    peerId: string;
+    participant: { userName: string; isHost: boolean };
+    stream?: MediaStream;
+    isHost: boolean;
+    onMute: (id: string) => void;
+    onKick: (id: string) => void;
+}) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const el = videoRef.current;
+        if (el && stream) {
+            el.srcObject = stream;
+            // Explicitly play to avoid autoplay restrictions on audio
+            el.play().catch(e => console.warn('Autoplay prevented on peer video:', e));
+        }
+    }, [stream]);
+
+    return (
+        <div className="bg-gray-900 rounded-xl overflow-hidden relative border border-gray-800 shadow-md">
+            {stream ? (
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className="flex flex-col items-center justify-center h-full bg-gray-900">
+                    <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-gray-300 text-xl font-bold">
+                        {participant.userName.charAt(0).toUpperCase()}
+                    </div>
+                    <p className="text-gray-400 text-xs mt-2">Connecting audio & video...</p>
+                </div>
+            )}
+            <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur flex items-center gap-2">
+                <span>{participant.userName}</span>
+                {participant.isHost && <Badge className="text-[9px] h-4 px-1 py-0 bg-blue-500/40 text-blue-200">Host</Badge>}
+            </div>
+            {isHost && (
+                <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                        onClick={() => onMute(peerId)}
+                        className="bg-black/60 hover:bg-red-600 text-white p-1.5 rounded-lg transition"
+                        title="Mute student"
+                    >
+                        <MicOff className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        onClick={() => onKick(peerId)}
+                        className="bg-black/60 hover:bg-red-700 text-white p-1.5 rounded-lg transition"
+                        title="Remove student"
+                    >
+                        <Ban className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function VConnectClassroom({ roomName, userName, isHost = false }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -43,12 +109,11 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
     const localStreamRef = useRef<MediaStream | null>(null);
     const screenStreamRef = useRef<MediaStream | null>(null);
 
-    // RTC Peer connections: { [socketId]: RTCPeerConnection }
+    // RTCPeerConnections dictionary: socketId -> RTCPeerConnection
     const pcsRef = useRef<{ [socketId: string]: RTCPeerConnection }>({});
-    // Remote media streams: { [socketId]: MediaStream }
-    const remoteStreamsRef = useRef<{ [socketId: string]: MediaStream }>({});
 
     // UI state
+    const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [screenSharing, setScreenSharing] = useState(false);
@@ -63,15 +128,15 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
-    // Participants list state
-    const [participants, setParticipants] = useState<{ [id: string]: { userName: string; isHost: boolean; hasVideo: boolean; hasAudio: boolean } }>({});
+    // Participants state: socketId -> { userName, isHost, stream }
+    const [participants, setParticipants] = useState<{ [id: string]: { userName: string; isHost: boolean; stream?: MediaStream } }>({});
 
     // Recording
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
 
-    // Whiteboard canvas drawing
+    // Drawing state
     const isDrawing = useRef(false);
     const lastPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -88,121 +153,125 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
     };
 
-    // Helper to attach stream to video element
-    const attachStream = (el: HTMLVideoElement | null, stream: MediaStream | null) => {
-        if (!el) return;
-        if (el.srcObject !== stream) {
-            el.srcObject = stream;
+    // Helper to start local camera/mic
+    const initLocalMedia = async (): Promise<MediaStream | null> => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+            localStreamRef.current = stream;
+            if (myVideoRef.current) {
+                myVideoRef.current.srcObject = stream;
+            }
+            return stream;
+        } catch (err) {
+            console.warn('Could not get video+audio, trying audio only:', err);
+            try {
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localStreamRef.current = audioStream;
+                setVideoEnabled(false);
+                return audioStream;
+            } catch (audioErr) {
+                console.error('No microphone or camera permission:', audioErr);
+                return null;
+            }
         }
     };
 
-    // Initialize Native WebRTC & Signaling
+    // Main WebRTC & Socket Lifecycle
     useEffect(() => {
-        let mounted = true;
+        let isMounted = true;
 
-        const initClassroom = async () => {
-            // 1. Acquire Local Camera + Microphone with Echo & Noise Suppression
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-                });
-                if (mounted) {
-                    localStreamRef.current = stream;
-                    attachStream(myVideoRef.current, stream);
-                }
-            } catch (err) {
-                console.warn('Could not acquire HD video+audio, trying audio only:', err);
-                try {
-                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    if (mounted) {
-                        localStreamRef.current = audioStream;
-                        setVideoEnabled(false);
-                    }
-                } catch (audioErr) {
-                    console.error('Microphone and camera permissions denied:', audioErr);
-                }
-            }
+        const startClassroom = async () => {
+            const localStream = await initLocalMedia();
 
-            // 2. Connect to Native Classroom Socket.IO Gateway
+            // Connect to Render Socket.io Gateway
             const socket = io(`${WS_SERVER}/classroom`, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
-                reconnectionAttempts: 20,
+                reconnectionAttempts: 50,
                 reconnectionDelay: 1000
             });
             socketRef.current = socket;
 
             socket.on('connect', () => {
+                if (!isMounted) return;
+                setConnectionStatus('connected');
                 socket.emit('join-room', { roomName, userName, isHost });
             });
 
-            // Handle existing users in room -> Create PeerConnection & send WebRTC Offer
-            socket.on('room-users', (users: any[]) => {
-                const parts: any = {};
-                users.forEach(u => {
-                    parts[u.id] = { userName: u.userName, isHost: u.isHost, hasVideo: true, hasAudio: true };
-                    createPeerConnection(u.id, true);
-                });
-                setParticipants(prev => ({ ...prev, ...parts }));
+            socket.on('disconnect', () => {
+                if (isMounted) setConnectionStatus('disconnected');
             });
 
-            // Handle new user joining -> Create PeerConnection & wait for their Offer
+            // Handle existing participants in the room
+            socket.on('room-users', (users: any[]) => {
+                if (!isMounted) return;
+                const initialMap: any = {};
+                users.forEach(u => {
+                    initialMap[u.id] = { userName: u.userName, isHost: u.isHost };
+                    createPeerConnection(u.id, true, socket, localStreamRef.current);
+                });
+                setParticipants(prev => ({ ...prev, ...initialMap }));
+            });
+
+            // Handle newly joined participant
             socket.on('user-joined', (u: any) => {
+                if (!isMounted) return;
                 setParticipants(prev => ({
                     ...prev,
-                    [u.id]: { userName: u.userName, isHost: u.isHost, hasVideo: true, hasAudio: true }
+                    [u.id]: { userName: u.userName, isHost: u.isHost }
                 }));
-                createPeerConnection(u.id, false);
+                createPeerConnection(u.id, false, socket, localStreamRef.current);
             });
 
-            // WebRTC Signaling: Offer
+            // WebRTC Offer
             socket.on('offer', async ({ caller, sdp }) => {
                 let pc = pcsRef.current[caller];
                 if (!pc) {
-                    pc = createPeerConnection(caller, false);
+                    pc = createPeerConnection(caller, false, socket, localStreamRef.current);
                 }
                 try {
                     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     socket.emit('answer', { target: caller, caller: socket.id, sdp: answer });
-                } catch (err) {
-                    console.error('Error handling WebRTC offer:', err);
+                } catch (e) {
+                    console.error('Error handling WebRTC offer:', e);
                 }
             });
 
-            // WebRTC Signaling: Answer
+            // WebRTC Answer
             socket.on('answer', async ({ caller, sdp }) => {
                 const pc = pcsRef.current[caller];
                 if (pc) {
                     try {
                         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                    } catch (err) {
-                        console.error('Error handling WebRTC answer:', err);
+                    } catch (e) {
+                        console.error('Error handling WebRTC answer:', e);
                     }
                 }
             });
 
-            // WebRTC Signaling: ICE Candidate
+            // WebRTC ICE Candidate
             socket.on('ice-candidate', async ({ caller, candidate }) => {
                 const pc = pcsRef.current[caller];
                 if (pc && candidate) {
                     try {
                         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    } catch (err) {
-                        console.error('Error adding ICE candidate:', err);
+                    } catch (e) {
+                        console.error('Error adding ICE candidate:', e);
                     }
                 }
             });
 
-            // User Left
+            // Participant Left
             socket.on('user-left', ({ userId }) => {
                 if (pcsRef.current[userId]) {
                     pcsRef.current[userId].close();
                     delete pcsRef.current[userId];
                 }
-                delete remoteStreamsRef.current[userId];
                 setParticipants(prev => {
                     const next = { ...prev };
                     delete next[userId];
@@ -213,7 +282,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             // Text Chat
             socket.on('chat', (m: any) => setMessages(prev => [...prev, m]));
 
-            // Admin Control Actions
+            // Admin Controls
             socket.on('admin-mute-all', () => {
                 if (!isHost && localStreamRef.current) {
                     localStreamRef.current.getAudioTracks().forEach(t => (t.enabled = false));
@@ -237,12 +306,6 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
 
             socket.on('admin-toggle-chat', (disabled: boolean) => {
                 setChatDisabled(disabled);
-                setMessages(prev => [...prev, {
-                    user: 'SYSTEM',
-                    text: disabled ? 'Host has disabled student chat.' : 'Host has enabled student chat.',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    system: true
-                }]);
             });
 
             socket.on('admin-kick-user', () => {
@@ -259,7 +322,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
                 }
             });
 
-            // Whiteboard Broadcast Sync
+            // Whiteboard Sync
             socket.on('whiteboard-state', (isOpen: boolean) => {
                 setShowWhiteboard(isOpen);
             });
@@ -286,25 +349,24 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             });
         };
 
-        // PeerConnection Factory
-        const createPeerConnection = (targetId: string, isInitiator: boolean): RTCPeerConnection => {
+        const createPeerConnection = (targetId: string, isInitiator: boolean, s: Socket, mediaStream: MediaStream | null): RTCPeerConnection => {
             const pc = new RTCPeerConnection(RTC_CONFIG);
             pcsRef.current[targetId] = pc;
 
-            // Add local tracks (Camera or Screen)
-            const activeStream = screenStreamRef.current || localStreamRef.current;
+            // Add local audio and video tracks
+            const activeStream = screenStreamRef.current || mediaStream;
             if (activeStream) {
                 activeStream.getTracks().forEach(track => {
                     pc.addTrack(track, activeStream);
                 });
             }
 
-            // Trickle ICE
+            // Send ICE candidates to peer through Render socket gateway
             pc.onicecandidate = (event) => {
-                if (event.candidate && socketRef.current) {
-                    socketRef.current.emit('ice-candidate', {
+                if (event.candidate) {
+                    s.emit('ice-candidate', {
                         target: targetId,
-                        caller: socketRef.current.id,
+                        caller: s.id,
                         candidate: event.candidate
                     });
                 }
@@ -314,20 +376,19 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             pc.ontrack = (event) => {
                 const stream = event.streams[0];
                 if (stream) {
-                    remoteStreamsRef.current[targetId] = stream;
                     setParticipants(prev => ({
                         ...prev,
-                        [targetId]: { ...prev[targetId], hasVideo: true }
+                        [targetId]: { ...prev[targetId], stream }
                     }));
                 }
             };
 
-            // Initiator creates Offer
+            // If caller, create offer and send to peer
             if (isInitiator) {
                 pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
                     .then(async (offer) => {
                         await pc.setLocalDescription(offer);
-                        socketRef.current?.emit('offer', { target: targetId, caller: socketRef.current.id, sdp: offer });
+                        s.emit('offer', { target: targetId, caller: s.id, sdp: offer });
                     })
                     .catch(err => console.error('Failed to create offer:', err));
             }
@@ -335,10 +396,10 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             return pc;
         };
 
-        initClassroom();
+        startClassroom();
 
         return () => {
-            mounted = false;
+            isMounted = false;
             localStreamRef.current?.getTracks().forEach(t => t.stop());
             screenStreamRef.current?.getTracks().forEach(t => t.stop());
             Object.values(pcsRef.current).forEach(pc => pc.close());
@@ -346,7 +407,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
         };
     }, [roomName, userName, isHost]);
 
-    // Audio Mute / Unmute
+    // Mic Toggle
     const toggleAudio = () => {
         if (localStreamRef.current) {
             const audioTrack = localStreamRef.current.getAudioTracks()[0];
@@ -358,7 +419,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
         }
     };
 
-    // Video Mute / Unmute
+    // Camera Toggle
     const toggleVideo = () => {
         if (localStreamRef.current) {
             const videoTrack = localStreamRef.current.getVideoTracks()[0];
@@ -370,7 +431,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
         }
     };
 
-    // Screen Sharing with System Audio
+    // Screen Sharing
     const toggleScreenShare = async () => {
         if (screenSharing) {
             screenStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -378,7 +439,6 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             setScreenSharing(false);
             socketRef.current?.emit('screen-share-state', { roomName, isSharing: false, userName });
 
-            // Restore camera tracks to peers
             if (localStreamRef.current) {
                 const camVideoTrack = localStreamRef.current.getVideoTracks()[0];
                 if (camVideoTrack) {
@@ -417,12 +477,12 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
                     }
                 };
             } catch (err) {
-                console.warn('Screen share cancelled or failed:', err);
+                console.warn('Screen share cancelled:', err);
             }
         }
     };
 
-    // Classroom Recording
+    // Lecture Recording
     const toggleRecording = () => {
         if (isRecording) {
             mediaRecorderRef.current?.stop();
@@ -571,7 +631,7 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900 border-b border-gray-800">
                 <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    <div className={`w-2.5 h-2.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
                     <span className="text-white text-sm font-semibold tracking-wide">V-Connect Classroom</span>
                     <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">LIVE</Badge>
                     {isRecording && (
@@ -685,42 +745,15 @@ export function VConnectClassroom({ roomName, userName, isHost = false }: Props)
 
                         {/* Remote Peer Feeds */}
                         {participantList.map(([peerId, p]) => (
-                            <div key={peerId} className="bg-gray-900 rounded-xl overflow-hidden relative border border-gray-800 shadow-md">
-                                <video
-                                    autoPlay
-                                    playsInline
-                                    className="w-full h-full object-cover"
-                                    ref={el => {
-                                        if (el && remoteStreamsRef.current[peerId]) {
-                                            if (el.srcObject !== remoteStreamsRef.current[peerId]) {
-                                                el.srcObject = remoteStreamsRef.current[peerId];
-                                            }
-                                        }
-                                    }}
-                                />
-                                <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur flex items-center gap-2">
-                                    <span>{p.userName}</span>
-                                    {p.isHost && <Badge className="text-[9px] h-4 px-1 py-0 bg-blue-500/40 text-blue-200">Host</Badge>}
-                                </div>
-                                {isHost && (
-                                    <div className="absolute top-2 right-2 flex gap-1">
-                                        <button
-                                            onClick={() => muteSingleStudent(peerId)}
-                                            className="bg-black/60 hover:bg-red-600 text-white p-1.5 rounded-lg transition"
-                                            title="Mute student"
-                                        >
-                                            <MicOff className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            onClick={() => kickStudent(peerId)}
-                                            className="bg-black/60 hover:bg-red-700 text-white p-1.5 rounded-lg transition"
-                                            title="Remove student"
-                                        >
-                                            <Ban className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            <RemoteParticipantTile
+                                key={peerId}
+                                peerId={peerId}
+                                participant={p}
+                                stream={p.stream}
+                                isHost={isHost}
+                                onMute={muteSingleStudent}
+                                onKick={kickStudent}
+                            />
                         ))}
                     </div>
                 )}
